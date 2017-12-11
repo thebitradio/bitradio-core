@@ -60,8 +60,13 @@ static const struct { uint32_t height; const char *hash; uint32_t timestamp; uin
 };
 
 static const char *dns_seeds[] = {
-        "seed.digibyte.co", "seed2.hashdragon.com", "dgb.cryptoservices.net",
-        "52.183.103.9", "138.91.245.174", "13.82.55.134", "66.228.56.115"
+        "seed.digibyte.co.",
+        "seed2.hashdragon.com.",
+        "dgb.cryptoservices.net.",
+        "52.183.103.9.",
+        "138.91.245.174.",
+        "13.82.55.134.",
+        "66.228.56.115"
 };
 
 #else // main net
@@ -83,8 +88,13 @@ static const struct {
 };
 
 static const char *dns_seeds[] = {
-        "seed.digibyte.co", "seed2.hashdragon.com", "dgb.cryptoservices.net",
-        "52.183.103.9", "138.91.245.174", "13.82.55.134", "66.228.56.115"
+        "seed.digibyte.co.",
+        "seed2.hashdragon.com.",
+        "dgb.cryptoservices.net.",
+        "52.183.103.9.",
+        "138.91.245.174.",
+        "13.82.55.134.",
+        "66.228.56.115"
 };
 
 #endif
