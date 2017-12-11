@@ -294,7 +294,7 @@ int BRMerkleBlockIsValid(const BRMerkleBlock *block, uint32_t currentTime)
         if (block->blockHash.u8[i] > t.u8[i]) {
             r = 0;
 
-            digi_log("invalid pow[%d]: %x - %x", i, block->powHash.u8[i], t.u8[i]);
+            digi_log("invalid blockHash[%d]: %x - %x", i, block->blockHash.u8[i], t.u8[i]);
         }
     }
     
