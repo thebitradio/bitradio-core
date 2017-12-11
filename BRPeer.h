@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 #if BITCOIN_TESTNET
-#define STANDARD_PORT 18333 //TODO: Update this value when the testnet becomes available.
+#define STANDARD_PORT 12024 //TODO: Update this value when the testnet becomes available.
 #else
 #define STANDARD_PORT 12024
 #endif
