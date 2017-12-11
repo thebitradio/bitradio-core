@@ -54,7 +54,7 @@
 #define ENABLED_SERVICES   0ULL  // we don't provide full blocks to remote nodes
 #define PROTOCOL_VERSION   70015
 #define MIN_PROTO_VERSION  70001 // peers earlier than this protocol version not supported (need v0.9 txFee relay rules)
-#define LOCAL_HOST         0x7f000001
+#define LOCAL_HOST         ((UInt128) { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01 })
 #define CONNECT_TIMEOUT    3000.0
 #define MESSAGE_TIMEOUT    10.0
 
