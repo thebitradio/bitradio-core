@@ -50,6 +50,7 @@ extern "C" {
 
 typedef struct {
     UInt256 blockHash;
+    UInt256 powHash;
     uint32_t version;
     UInt256 prevBlock;
     UInt256 merkleRoot;
