@@ -1,6 +1,10 @@
 module BRCore [system] [extern_c] {
     textual header "secp256k1/src/basic-config.h"
     textual header "secp256k1/src/secp256k1.c"
+	textual header "crypto/groestl.h"
+	textual header "crypto/qubit.h"
+	textual header "crypto/skein.h"
+	textual header "crypto/sha256.h"
     header "BRInt.h"
     header "BRArray.h"
     header "BRSet.h"
