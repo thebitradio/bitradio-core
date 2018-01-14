@@ -98,12 +98,14 @@ static const struct {
         { 1435000, "f78cc9c2791c8a23720e2efcdaf46584046ee5db8f050e21a3a15a13f5c68da0", 1449312651, 0x1c1f3df6 },
         { 4255555, "23f72e760542bf021ec76d04231ad7cf80142069a79ba702028e074b726f86ef", 1491329321, 0x1b26a4c3 },
         { 5712333, "0000000000000003363ff6207a99a175e8b5adff71c77817a92f127fcefe936e", 1513061829, 0x1924bd79 },
-        { 5782400, "b1005c34a3f4fbc0d99f2fe521490b63abd2ff2029fef80df72dd22ac2c735ec", 1514109544, 0x1a5b24c0 }
+        { 5782400, "b1005c34a3f4fbc0d99f2fe521490b63abd2ff2029fef80df72dd22ac2c735ec", 1514109544, 0x1a5b24c0 },
+        { 5822077, "27d9687ef5f34d2b451c2c0d9c4a6612e7b4bbdc083d03bbdf2d2adbef08e5b1", 1514700120, 0x1b023a6c },
+        { 5862666, "0000000000000000b06d70ff1a3424a933b7743dc44ed08422cbc6b3fef8422c", 1515304798, 0x1906cff8 }
 };
 
 static const char *dns_seeds[] = {
-        "seed.digibyte.io",
-        "seed.digibyteprojects.com"
+        "seed.digibyteprojects.com",
+        "seed.digibyte.io"
 };
 
 #endif
