@@ -84,6 +84,34 @@ BRMerkleBlock *BRMerkleBlockNew(void)
     return block;
 }
 
+// returns a deep copy of block and that must be freed by calling BRMerkleBlockFree()
+BRMerkleBlock *BRMerkleBlockCopy(const BRMerkleBlock *source)
+{
+    BRMerkleBlock *block = calloc(1, sizeof(*source));
+
+    assert(block != NULL);
+    *block = *source;
+
+    block->hashes = NULL;
+    block->flags = NULL;
+
+    // hashes
+    size_t hashesLen = source->hashesCount * sizeof(UInt256);
+    if (hashesLen > 0) {
+        block->hashes = (UInt256 *) malloc (hashesLen);
+        memcpy(block->hashes, source->hashes, hashesLen);
+    }
+
+    // flags
+    size_t flagsLen = source->flagsLen*sizeof(uint8_t);
+    if (flagsLen > 0) {
+        block->flags = (uint8_t *) malloc (flagsLen);
+        memcpy(block->flags, source->flags, flagsLen);
+    }
+
+    return block;
+}
+
 // buf must contain either a serialized merkleblock or header
 // returns a merkle block struct that must be freed by calling BRMerkleBlockFree()
 BRMerkleBlock *BRMerkleBlockParse(const uint8_t *buf, size_t bufLen)
@@ -359,7 +387,7 @@ int BRMerkleBlockVerifyDifficulty(const BRMerkleBlock *block, const BRMerkleBloc
     
     if (! previous || !UInt256Eq(block->prevBlock, previous->blockHash) || block->height != previous->height + 1) r = 0;
     if (r && (block->height % BLOCK_DIFFICULTY_INTERVAL) == 0 && transitionTime == 0) r = 0;
-    
+        
 #if BITCOIN_TESTNET
     // TODO: implement testnet difficulty rule check
     return r; // don't worry about difficulty on testnet for now

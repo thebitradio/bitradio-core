@@ -38,7 +38,7 @@
 #define SIGHASH_NONE         0x02 // sign none of the outputs, I don't care where the bitcoins go
 #define SIGHASH_SINGLE       0x03 // sign one of the outputs, I don't care where the other outputs go
 #define SIGHASH_ANYONECANPAY 0x80 // let other people add inputs, I don't care where the rest of the bitcoins come from
-#define SIGHASH_FORKID       0x40 // use BIP143 digest method (for b-cash signatures)
+#define SIGHASH_FORKID       0x40 // use BIP143 digest method (for b-cash/b-gold signatures)
 
 // returns a random number less than upperBound, for non-cryptographic use only
 uint32_t BRRand(uint32_t upperBound)
@@ -131,6 +131,18 @@ static size_t _BRTxInputData(const BRTxInput *input, uint8_t *data, size_t dataL
     return (! data || off <= dataLen) ? off : 0;
 }
 
+void BRTxInputCopy(BRTxInput *target, const BRTxInput *source) {
+    assert (target != NULL);
+    assert (source != NULL);
+    *target = *source;
+
+    target->script = NULL;
+    BRTxInputSetScript(target, source->script, source->scriptLen);
+
+    target->signature = NULL;
+    BRTxInputSetSignature(target, source->signature, source->sigLen);
+}
+
 void BRTxOutputSetAddress(BRTxOutput *output, const char *address)
 {
     assert(output != NULL);
@@ -180,6 +192,15 @@ static size_t _BRTransactionOutputData(const BRTransaction *tx, uint8_t *data, s
     }
     
     return (! data || off <= dataLen) ? off : 0;
+}
+
+void BRTxOutputCopy(BRTxOutput *target, const BRTxOutput *source) {
+    assert (target != NULL);
+    assert (source != NULL);
+    *target = *source;
+
+    target->script = NULL;
+    BRTxOutputSetScript(target, source->script, source->scriptLen);
 }
 
 // writes the BIP143 witness program data that needs to be hashed and signed for the tx input at index
@@ -333,6 +354,32 @@ BRTransaction *BRTransactionNew(void)
     tx->lockTime = TX_LOCKTIME;
     tx->blockHeight = TX_UNCONFIRMED;
     return tx;
+}
+
+// returns a deep copy of tx and that must be freed by calling BRTransactionFree()
+BRTransaction *BRTransactionCopy(const BRTransaction *tx)
+{
+    assert (tx != NULL);
+    BRTransaction *cpy = calloc(1, sizeof(*tx));
+
+    assert (cpy != NULL);
+    *cpy = *tx;
+
+    size_t inputCount = array_capacity(tx->inputs);
+    array_new (cpy->inputs,  inputCount);
+    array_add_array (cpy->inputs,  tx->inputs, inputCount);
+    for (int i = 0; i < inputCount; i++) {
+        BRTxInputCopy(&cpy->inputs[i], &tx->inputs[i]);
+    }
+
+    size_t outputCount = array_capacity(tx->outputs);
+    array_new (cpy->outputs, outputCount);
+    array_add_array (cpy->outputs, tx->outputs, outputCount);
+    for (int i = 0; i < outputCount; i++) {
+        BRTxOutputCopy(&cpy->outputs[i], &tx->outputs[i]);
+    }
+
+    return cpy;
 }
 
 // buf must contain a serialized tx
@@ -507,7 +554,7 @@ int BRTransactionIsSigned(const BRTransaction *tx)
 }
 
 // adds signatures to any inputs with NULL signatures that can be signed with any keys
-// forkId is 0 for bitcoin, 0x40 for b-cash
+// forkId is 0 for bitcoin, 0x40 for b-cash, 0x4f for b-gold
 // returns true if tx is signed
 int BRTransactionSign(BRTransaction *tx, int forkId, BRKey keys[], size_t keysCount)
 {
