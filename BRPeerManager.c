@@ -1368,9 +1368,11 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
     BRMerkleBlock *saveBlocks[saveCount];
     
     for (i = 0, b = block; b && i < saveCount; i++) {
-        assert(b->height != BLOCK_UNKNOWN_HEIGHT); // verify all blocks to be saved are in the chain
-        saveBlocks[i] = b;
-        b = BRSetGet(manager->blocks, &b->prevBlock);
+        //FIXME: In the Breadwallet Core, that team asserts that a block does not have an unknown height in order to prevent saving orphans.  That leads to a hard crash.
+        if (b->height != BLOCK_UNKNOWN_HEIGHT) {
+            saveBlocks[i] = b;
+            b = BRSetGet(manager->blocks, &b->prevBlock);
+        }
     }
     
     // make sure the set of blocks to be saved starts at a difficulty interval
