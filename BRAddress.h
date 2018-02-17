@@ -40,7 +40,8 @@ extern "C" {
 
 // bitcoin address prefixes
 #define BITCOIN_PUBKEY_ADDRESS      30
-#define BITCOIN_SCRIPT_ADDRESS      5
+#define BITCOIN_SCRIPT_ADDRESS      63
+#define BITCOIN_SCRIPT_ADDRESS_OLD  5
 #define BITCOIN_PUBKEY_ADDRESS_TEST 111  //TODO: Replace these values when the testnet becomes available.
 #define BITCOIN_SCRIPT_ADDRESS_TEST 196  //TODO: Replace these values when the testnet becomes available.
 
