@@ -60,12 +60,9 @@ static const struct { uint32_t height; const char *hash; uint32_t timestamp; uin
 };
 
 static const char *dns_seeds[] = {
-        "digibyte.io.",
-        "seed.digibyte.io.",
-        "digiexplorer.info.",
-        "digiexplorer.info.",
-        "digihash.co.",
-        "digihash.co."
+        "seed1.digibyte.io.",
+        "seed2.digibyte.io.",
+        "seed3.digibyte.io.",
 };
 
 #else // main net
@@ -104,8 +101,9 @@ static const struct {
 };
 
 static const char *dns_seeds[] = {
-        "digiexplorer.info",
-        "digihash.co"
+        "seed1.digibyte.io",
+        "seed2.digibyte.io",
+        "seed3.digibyte.io"
 };
 
 #endif
@@ -1235,7 +1233,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block) {
     }
 
     // ignore block headers that are newer than one week before earliestKeyTime (it's a header if it has 0 totalTx)
-    if (block->totalTx == 0 && block->timestamp + 7 * 24 * 60 * 60 > manager->earliestKeyTime + 2 * 60 * 60) {
+    if (block->totalTx == 0 && block->timestamp + 24 * 60 * 60 > manager->earliestKeyTime + 2 * 60 * 60) {
         BRMerkleBlockFree(block);
         block = NULL;
     } else if (manager->bloomFilter == NULL) { // ingore potentially incomplete blocks when a filter update is pending
@@ -1276,7 +1274,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block) {
         block = NULL;
         _BRPeerManagerPeerMisbehavin(manager, peer);
     } else if (UInt256Eq(block->prevBlock, manager->lastBlock->blockHash)) { // new block extends main chain
-        if ((block->height % 500) == 0 || txCount > 0 || block->height >= BRPeerLastBlock(peer)) {
+        if ((block->height % 16000) == 0 || txCount > 0 || block->height >= BRPeerLastBlock(peer)) {
             peer_log(peer, "adding block #%"
                     PRIu32
                     ", false positive rate: %f", block->height, manager->fpRate);
