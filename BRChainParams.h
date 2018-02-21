@@ -48,9 +48,7 @@ typedef struct {
 static const char *BRMainNetDNSSeeds[] = {
         "seed1.digibyte.io",
         "seed2.digibyte.io",
-        "seed3.digibyte.io",
-        "digihash.co",
-        "digiexplorer.info", NULL
+        "seed3.digibyte.io", NULL
 };
 
 static const char *BRTestNetDNSSeeds[] = {
