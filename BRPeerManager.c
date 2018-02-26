@@ -103,10 +103,12 @@ static const struct {
 };
 
 static const char *dns_seeds[] = {
-    "75.40.49.155",
-    "68.79.192.186",
-    "104.200.67.16",
-    "195.211.155.193"
+        "digiexplorer.info",
+        "digihash.co",
+        "seed.digibyte.io",
+        "seed1.digibyte.io",
+        "seed2.digibyte.io",
+        "seed3.digibyte.io"
 };
 
 #endif
