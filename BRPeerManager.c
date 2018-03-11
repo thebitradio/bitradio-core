@@ -1774,14 +1774,13 @@ void BRPeerManagerRescan(BRPeerManager *manager) {
             }
         }
 
-        //FIXME: We need to explore why this code causes the rescan operation to completely fail.
-        /*if (manager->downloadPeer) { // disconnect the current download peer so a new random one will be selected
+        if (manager->downloadPeer) { // disconnect the current download peer so a new random one will be selected
             for (size_t i = array_count(manager->peers); i > 0; i--) {
                 if (BRPeerEq(&manager->peers[i - 1], manager->downloadPeer)) array_rm(manager->peers, i - 1);
             }
 
             BRPeerDisconnect(manager->downloadPeer);
-        }*/
+        }
 
         manager->syncStartHeight = 0; // a syncStartHeight of 0 indicates that syncing hasn't started yet
         pthread_mutex_unlock(&manager->lock);
