@@ -1987,3 +1987,17 @@ void BRPeerManagerFree(BRPeerManager *manager)
     pthread_mutex_destroy(&manager->lock);
     free(manager);
 }
+
+
+// function to create Peermanager under for the mainnet directly
+BRPeerManager *BPPeerManagerMainNetNew(BRWallet *wallet, uint32_t earliestKeyTime,
+									   BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount) {
+	return BRPeerManagerNew(&BRMainNetParams, wallet, earliestKeyTime,blocks, blocksCount, peers,peersCount);
+}
+
+// function to create Peermanager under for the testnet directly
+BRPeerManager *BPPeerManagerTestNetNew(BRWallet *wallet, uint32_t earliestKeyTime,
+									   BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount) {
+	return BRPeerManagerNew(&BRTestNetParams, wallet, earliestKeyTime,blocks, blocksCount, peers,peersCount);
+}
+

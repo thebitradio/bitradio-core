@@ -110,6 +110,15 @@ size_t BRPeerManagerRelayCount(BRPeerManager *manager, UInt256 txHash);
 
 // frees memory allocated for manager (call BRPeerManagerDisconnect() first if connected)
 void BRPeerManagerFree(BRPeerManager *manager);
+	
+// function to create Peermanager under for the mainnet directly
+BRPeerManager *BPPeerManagerMainNetNew(BRWallet *wallet, uint32_t earliestKeyTime,
+									   BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount);
+
+// function to create Peermanager under for the testnet directly
+BRPeerManager *BPPeerManagerTestNetNew(BRWallet *wallet, uint32_t earliestKeyTime,
+									   BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount);
+
 
 #ifdef __cplusplus
 }
