@@ -412,7 +412,7 @@ static int _BRPeerAcceptTxMessage(BRPeer *peer, const uint8_t *msg, size_t msgLe
     }
     else {
         txHash = tx->txHash;
-        peer_log(peer, "got tx: %s", u256hex(txHash));
+        peer_log(peer, "got tx: %s", log_u256_hex_encode(txHash));
 
         if (ctx->relayedTx) {
             ctx->relayedTx(ctx->info, tx);
@@ -481,7 +481,7 @@ static int _BRPeerAcceptHeadersMessage(BRPeer *peer, const uint8_t *msg, size_t 
                 BRMerkleBlock *block = BRMerkleBlockParse(&msg[off + 81*i], 81);
                 
                 if (! BRMerkleBlockIsValid(block, (uint32_t)now)) {
-                    peer_log(peer, "invalid block header: %s", u256hex(block->blockHash));
+                    peer_log(peer, "invalid block header: %s ", log_u256_hex_encode(block->blockHash));
                     BRMerkleBlockFree(block);
                     r = 0;
                 }
@@ -697,7 +697,7 @@ static int _BRPeerAcceptMerkleblockMessage(BRPeer *peer, const uint8_t *msg, siz
         r = 0;
     }
     else if (! BRMerkleBlockIsValid(block, (uint32_t)time(NULL))) {
-        peer_log(peer, "invalid merkleblock: %s", u256hex(block->blockHash));
+        peer_log(peer, "invalid merkleblock: %s", log_u256_hex_encode(block->blockHash));
         BRMerkleBlockFree(block);
         block = NULL;
         r = 0;
@@ -777,7 +777,8 @@ static int _BRPeerAcceptRejectMessage(BRPeer *peer, const uint8_t *msg, size_t m
             off += hashLen;
 
             if (! UInt256IsZero(txHash)) {
-                peer_log(peer, "rejected %s code: 0x%x reason: \"%s\" txid: %s", type, code, reason, u256hex(txHash));
+                peer_log(peer, "rejected %s code: 0x%x reason: \"%s\" txid: %s", type, code, reason,
+                         log_u256_hex_encode(txHash));
                 if (ctx->rejectedTx) ctx->rejectedTx(ctx->info, txHash, code);
             }
             else peer_log(peer, "rejected %s code: 0x%x reason: \"%s\"", type, code, reason);
@@ -799,7 +800,7 @@ static int _BRPeerAcceptFeeFilterMessage(BRPeer *peer, const uint8_t *msg, size_
     }
     else {
         ctx->feePerKb = UInt64GetLE(msg);
-        peer_log(peer, "got feefilter with rate %"PRIu64, ctx->feePerKb);
+        peer_log(peer, "got feefilter with rate %llu", ctx->feePerKb);
         if (ctx->setFeePerKb) ctx->setFeePerKb(ctx->info, ctx->feePerKb);
     }
     
@@ -812,8 +813,8 @@ static int _BRPeerAcceptMessage(BRPeer *peer, const uint8_t *msg, size_t msgLen,
     int r = 1;
     
     if (ctx->currentBlock && strncmp(MSG_TX, type, 12) != 0) { // if we receive a non-tx message, merkleblock is done
-        peer_log(peer, "incomplete merkleblock %s, expected %zu more tx, got %s", u256hex(ctx->currentBlock->blockHash),
-                 array_count(ctx->currentBlockTxHashes), type);
+        peer_log(peer, "incomplete merkleblock %s, expected %zu more tx, got %s",
+                 log_u256_hex_encode(ctx->currentBlock->blockHash), array_count(ctx->currentBlockTxHashes), type);
         array_clear(ctx->currentBlockTxHashes);
         ctx->currentBlock = NULL;
         r = 0;
@@ -1004,7 +1005,8 @@ static void *_peerThreadRoutine(void *arg)
                         
                         if (UInt32GetLE(&hash) != checksum) { // verify checksum
                             peer_log(peer, "error reading %s, invalid checksum %x, expected %x, payload length:%"PRIu32
-                                     ", SHA256_2:%s", type, UInt32GetLE(&hash), checksum, msgLen, u256hex(hash));
+                                     ", SHA256_2:%s", type, UInt32GetLE(&hash), checksum, msgLen,
+                                     log_u256_hex_encode(hash));
                             error = EPROTO;
                         }
                         else if (! _BRPeerAcceptMessage(peer, payload, msgLen, type)) error = EPROTO;
@@ -1392,8 +1394,9 @@ void BRPeerSendGetheaders(BRPeer *peer, const UInt256 locators[], size_t locator
     off += sizeof(UInt256);
 
     if (locatorsCount > 0) {
-        peer_log(peer, "calling getheaders with %zu locators: [%s,%s %s]", locatorsCount, u256hex(locators[0]),
-                 (locatorsCount > 2 ? " ...," : ""), (locatorsCount > 1 ? u256hex(locators[locatorsCount - 1]) : ""));
+        peer_log(peer, "calling getheaders with %zu locators: [%s %s %s]", locatorsCount,
+                 log_u256_hex_encode(locators[0]), (locatorsCount > 1 ? log_u256_hex_encode(locators[1]) : ""),
+                 (locatorsCount > 2 ? log_u256_hex_encode(locators[locatorsCount - 1]) : ""));
         BRPeerSendMessage(peer, msg, off, MSG_GETHEADERS);
     }
 }
@@ -1417,8 +1420,9 @@ void BRPeerSendGetblocks(BRPeer *peer, const UInt256 locators[], size_t locators
     off += sizeof(UInt256);
     
     if (locatorsCount > 0) {
-        peer_log(peer, "calling getblocks with %zu locators: [%s,%s %s]", locatorsCount, u256hex(locators[0]),
-                 (locatorsCount > 2 ? " ...," : ""), (locatorsCount > 1 ? u256hex(locators[locatorsCount - 1]) : ""));
+        peer_log(peer, "calling getblocks with %zu locators: [%s,%s %s]", locatorsCount,
+                 log_u256_hex_encode(locators[0]), (locatorsCount > 2 ? " ...," : ""),
+                 (locatorsCount > 1 ? log_u256_hex_encode(locators[locatorsCount - 1]) : ""));
         BRPeerSendMessage(peer, msg, off, MSG_GETBLOCKS);
     }
 }
