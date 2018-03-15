@@ -1112,33 +1112,26 @@ static int _BRPeerManagerVerifyBlock(BRPeerManager *manager, BRMerkleBlock *bloc
     uint32_t transitionTime = 0;
     int r = 1;
     
-    // check if we hit a difficulty transition, and find previous transition time
-    if ((block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) {
-        BRMerkleBlock *b = block;
-        UInt256 prevBlock;
+    BRMerkleBlock *b = block;
+    UInt256 prevBlock;
 
-        for (uint32_t i = 0; b && i < BLOCK_DIFFICULTY_INTERVAL; i++) {
-            b = BRSetGet(manager->blocks, &b->prevBlock);
-        }
+    if (! b) {
+        peer_log(peer, "missing previous difficulty tansition time, can't verify blockHash: %s",
+                 u256hex(block->blockHash));
+        r = 0;
+    }
+    else {
+        transitionTime = b->timestamp;
+        prevBlock = b->prevBlock;
+    }
 
-        if (! b) {
-            peer_log(peer, "missing previous difficulty tansition time, can't verify blockHash: %s",
-                     u256hex(block->blockHash));
-            r = 0;
-        }
-        else {
-            transitionTime = b->timestamp;
+    while (b) { // free up some memory
+        b = BRSetGet(manager->blocks, &prevBlock);
+
+        if (b) {
             prevBlock = b->prevBlock;
-        }
-        
-        while (b) { // free up some memory
-            b = BRSetGet(manager->blocks, &prevBlock);
-            if (b) prevBlock = b->prevBlock;
-
-            if (b && (b->height % BLOCK_DIFFICULTY_INTERVAL) != 0) {
-                BRSetRemove(manager->blocks, b);
-                BRMerkleBlockFree(b);
-            }
+            BRSetRemove(manager->blocks, b);
+            BRMerkleBlockFree(b);
         }
     }
 
@@ -1270,10 +1263,10 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
             manager->connectFailureCount = 0; // reset failure count once we know our initial request didn't timeout
         }
         
-        if ((block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) saveCount = 1; // save transition block immediately
+        saveCount = 1; // save transition block immediately
         
         if (block->height == manager->estimatedHeight) { // chain download is complete
-            saveCount = (block->height % BLOCK_DIFFICULTY_INTERVAL) + BLOCK_DIFFICULTY_INTERVAL + 1;
+            saveCount = 1;
             _BRPeerManagerLoadMempools(manager);
         }
     }
@@ -1349,7 +1342,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
             manager->lastBlock = block;
             
             if (block->height == manager->estimatedHeight) { // chain download is complete
-                saveCount = (block->height % BLOCK_DIFFICULTY_INTERVAL) + BLOCK_DIFFICULTY_INTERVAL + 1;
+                saveCount = 1;
                 _BRPeerManagerLoadMempools(manager);
             }
         }
@@ -1375,7 +1368,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         }
     }
     
-    // make sure the set of blocks to be saved starts at a difficulty interval
+    // ToDo: find an elegant solution on how many blocks we save on DGB as the difficulty adjusts on every block
     j = (i > 0) ? saveBlocks[i - 1]->height % BLOCK_DIFFICULTY_INTERVAL : 0;
     if (j > 0) i -= (i > BLOCK_DIFFICULTY_INTERVAL - j) ? BLOCK_DIFFICULTY_INTERVAL - j : i;
     assert(i == 0 || (saveBlocks[i - 1]->height % BLOCK_DIFFICULTY_INTERVAL) == 0);
@@ -1562,8 +1555,10 @@ BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, u
         assert(blocks[i]->height != BLOCK_UNKNOWN_HEIGHT); // height must be saved/restored along with serialized block
         BRSetAdd(manager->orphans, blocks[i]);
 
-        if ((blocks[i]->height % BLOCK_DIFFICULTY_INTERVAL) == 0 &&
-            (! block || blocks[i]->height > block->height)) block = blocks[i]; // find last transition block
+        // The most recent block is the last transition block
+        // ToDo: optimize
+        if (! block || blocks[i]->height > block->height)
+            block = blocks[i]; // find last transition block
     }
     
     while (block) {
