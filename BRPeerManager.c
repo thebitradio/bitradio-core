@@ -1671,8 +1671,8 @@ void BRPeerManagerConnect(BRPeerManager *manager)
         time_t now = time(NULL);
         BRPeer *peers;
 
-        if (array_count(manager->peers) < manager->maxConnectCount ||
-            manager->peers[manager->maxConnectCount - 1].timestamp + 3*24*60*60 < now) {
+		if ((array_count(manager->peers) < (4 * manager->maxConnectCount)) ||
+			((manager->peers[manager->maxConnectCount - 1].timestamp + 3*24*60*60) < now)) {
             _BRPeerManagerFindPeers(manager);
         }
         
@@ -1680,7 +1680,7 @@ void BRPeerManagerConnect(BRPeerManager *manager)
         array_add_array(peers, manager->peers,
                         (array_count(manager->peers) < 100) ? array_count(manager->peers) : 100);
 
-        while (array_count(peers) > 0 && array_count(manager->connectedPeers) < manager->maxConnectCount) {
+        while ((array_count(peers) > 0) && (array_count(manager->connectedPeers) < manager->maxConnectCount)) {
             size_t i = BRRand((uint32_t)array_count(peers)); // index of random peer
             BRPeerCallbackInfo *info;
             
