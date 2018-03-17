@@ -263,6 +263,16 @@ static void _setApplyFreeBlock(void *info, void *block)
     BRMerkleBlockFree(block);
 }
 
+static size_t _BRPeerManagerAddPeer(BRPeerManager *manager, BRPeer *peer) {
+	size_t add = 1;
+	for (size_t i = array_count(manager->peers); i > 0; i--) {
+		BRPeer* otherPeer = (BRPeer*) &(manager->peers[i - 1]);
+		if (BRPeerEq(otherPeer, peer)) { i = 1; add = 0;}
+	}
+	if (add == 1) array_add(manager->peers, *peer);
+	return add;
+}
+
 static void _BRPeerManagerLoadBloomFilter(BRPeerManager *manager, BRPeer *peer)
 {
     // every time a new wallet address is added, the bloom filter has to be rebuilt, and each address is only used
@@ -680,7 +690,8 @@ static void *_findPeersThreadRoutine(void *arg)
     
     for (addr = addrList; addr && ! UInt128IsZero(*addr); addr++) {
         age = 24*60*60 + BRRand(2*24*60*60); // add between 1 and 3 days
-        array_add(manager->peers, ((BRPeer) { *addr, manager->params->standardPort, services, now - age, 0 }));
+		BRPeer peer = {*addr, manager->params->standardPort, services, now - age, 0};
+		_BRPeerManagerAddPeer(manager,&peer);
     }
 
     manager->dnsThreadCount--;
@@ -719,7 +730,8 @@ static void _BRPeerManagerFindPeers(BRPeerManager *manager)
         }
 
         for (addr = addrList = _addressLookup(manager->params->dnsSeeds[0]); addr && ! UInt128IsZero(*addr); addr++) {
-            array_add(manager->peers, ((BRPeer) { *addr, manager->params->standardPort, services, now, 0 }));
+			BRPeer peer = {*addr, manager->params->standardPort, services, now, 0};
+			_BRPeerManagerAddPeer(manager,&peer);
         }
 
         if (addrList) free(addrList);
