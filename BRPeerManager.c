@@ -1571,7 +1571,12 @@ BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, u
     block = NULL;
     
     for (size_t i = 0; blocks && i < blocksCount; i++) {
-        assert(blocks[i]->height != BLOCK_UNKNOWN_HEIGHT); // height must be saved/restored along with serialized block
+        //previously it was an assert, which would just crash if the block
+        //has incomplete data. Now just break and continue syncing from there
+        if (blocks[i]->height == BLOCK_UNKNOWN_HEIGHT) {
+            break;
+        }
+        //assert(blocks[i]->height != BLOCK_UNKNOWN_HEIGHT); // height must be saved/restored along with serialized block
         BRSetAdd(manager->orphans, blocks[i]);
 
         if ((blocks[i]->height % BLOCK_DIFFICULTY_INTERVAL) == 0 &&
