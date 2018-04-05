@@ -39,6 +39,36 @@ extern "C" {
 
 #define PEER_MAX_CONNECTIONS 6
 
+/* defines, how many blocks to be held in sqlite DB */
+#define SAVE_BLOCK_COUNT 300
+#define SAVE_BLOCK_INTERVAL 4000
+    
+/* OPTIONS FOR CLEARING MEMORY */
+/*
+Remarks:
+    The authors of the original breadwallet core ensure that the application
+    contains at least 2016 blocks, until a difficulty transition block gets relayed.
+    Since Digibyte makes use of DigiShield (or more specifically MultiShield), on each and
+    every block there occurs a difficulty transition.
+
+    We need to keep some blocks in memory in case of forks, to walk the chain backwards.
+    To clear memory we have introduced a trigger value: CLEAR_MEM_BLOCKS_COUNT_TRIGGER.
+    If the BRPeerManager instance contains more than CLEAR_MEM_BLOCKS_COUNT_TRIGGER blocks in 'blocks',
+    we trigger the memory cleanup. The first CLEAR_MEM_BLOCKS_COUNT_TAIL_LEN blocks will be freed up.
+    Note that we have to remove the tail, that is, we have to walk back the chain, until we reach the tail,
+    then free up the remaining blocks.
+ 
+    CLEAR_MEM_BLOCKS_COUNT_TAIL_LEN is at least the SAVE_BLOCK_COUNT
+        plus a reserve of CLEAR_MEM_BLOCKS_RESERVE_COUNT blocks.
+*/
+#define CLEAR_MEM_BLOCKS_COUNT_TRIGGER 5000
+#define CLEAR_MEM_BLOCKS_RESERVE_COUNT 500
+#define CLEAR_MEM_BLOCKS_COUNT_TAIL_LEN (CLEAR_MEM_BLOCKS_COUNT_TRIGGER - SAVE_BLOCK_COUNT - CLEAR_MEM_BLOCKS_RESERVE_COUNT)
+    
+/* Readability constants */
+#define ADD_TO_SAVED_BLOCKS 0
+#define REPLACE_SAVED_BLOCKS 1
+
 typedef struct BRPeerManagerStruct BRPeerManager;
 
 // returns a newly allocated BRPeerManager struct that must be freed by calling BRPeerManagerFree()

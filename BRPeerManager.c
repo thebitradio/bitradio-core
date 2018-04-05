@@ -1119,39 +1119,65 @@ static void _peerRejectedTx(void *info, UInt256 txHash, uint8_t code)
     if (manager->txStatusUpdate) manager->txStatusUpdate(manager->info);
 }
 
+// reduce memory usage
+// clear the tail that comes after 500 blocks.
+// checkpoints will remain in the blocks-Set, until we are ahead of them.
+static void _BRPeerManagerClearMemory(BRPeerManager* manager) {
+    BRMerkleBlock* blockPtr = manager->lastBlock;
+    UInt256 prevHash;
+    size_t count = BRSetCount(manager->blocks);
+    size_t i = 0;
+    
+    if (count >= CLEAR_MEM_BLOCKS_COUNT_TRIGGER) {
+        // find the tail
+        while (blockPtr && i++ <= (CLEAR_MEM_BLOCKS_COUNT_TRIGGER - CLEAR_MEM_BLOCKS_COUNT_TAIL_LEN))
+            blockPtr = BRSetGet(manager->blocks, &blockPtr->prevBlock);
+        
+        if (blockPtr) {
+            prevHash = blockPtr->prevBlock;
+            
+            // clear the tail
+            while (blockPtr && !UInt256IsZero(prevHash)) {
+                
+                // get the block
+                blockPtr = BRSetGet(manager->blocks, &prevHash);
+                if (!blockPtr) break;
+                
+                // get previous hash
+                prevHash = blockPtr->prevBlock;
+                
+                // remove the current block
+                if (BRSetRemove(manager->blocks, blockPtr)) {
+                    // free the actual memory
+                    BRMerkleBlockFree(blockPtr);
+                } else {
+                    // nothing to remove
+                    break;
+                }
+            }
+            
+            debug_log("[MEMORY]: Blocks reduced from %ld to %ld blocks\n", count, BRSetCount(manager->blocks));
+        }
+    }
+}
+
 static int _BRPeerManagerVerifyBlock(BRPeerManager *manager, BRMerkleBlock *block, BRMerkleBlock *prev, BRPeer *peer)
 {
     uint32_t transitionTime = 0;
     int r = 1;
     
     // check if we hit a difficulty transition, and find previous transition time
-    if ((block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) {
-        BRMerkleBlock *b = block;
-        UInt256 prevBlock;
+    BRMerkleBlock *b = manager->lastBlock;
+    UInt256 prevBlock;
 
-        for (uint32_t i = 0; b && i < BLOCK_DIFFICULTY_INTERVAL; i++) {
-            b = BRSetGet(manager->blocks, &b->prevBlock);
-        }
-
-        if (! b) {
-            peer_log(peer, "missing previous difficulty tansition time, can't verify blockHash: %s",
-                     u256hex(block->blockHash));
-            r = 0;
-        }
-        else {
-            transitionTime = b->timestamp;
-            prevBlock = b->prevBlock;
-        }
-        
-        while (b) { // free up some memory
-            b = BRSetGet(manager->blocks, &prevBlock);
-            if (b) prevBlock = b->prevBlock;
-
-            if (b && (b->height % BLOCK_DIFFICULTY_INTERVAL) != 0) {
-                BRSetRemove(manager->blocks, b);
-                BRMerkleBlockFree(b);
-            }
-        }
+    if (! b) {
+        peer_log(peer, "missing previous difficulty tansition time, can't verify blockHash: %s",
+                 u256hex(block->blockHash));
+        r = 0;
+    }
+    else {
+        transitionTime = b->timestamp;
+        prevBlock = b->prevBlock;
     }
 
     // verify block difficulty
@@ -1182,12 +1208,13 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
     size_t txCount = BRMerkleBlockTxHashes(block, NULL, 0);
     UInt256 _txHashes[(sizeof(UInt256)*txCount <= 0x1000) ? txCount : 0],
             *txHashes = (sizeof(UInt256)*txCount <= 0x1000) ? _txHashes : malloc(txCount*sizeof(*txHashes));
-    size_t i, j, fpCount = 0, saveCount = 0;
+    size_t i, fpCount = 0, saveCount = 0;
     BRMerkleBlock orphan, *b, *b2, *prev, *next = NULL;
     uint32_t txTime = 0;
     
     assert(txHashes != NULL);
     txCount = BRMerkleBlockTxHashes(block, txHashes, txCount);
+    
     pthread_mutex_lock(&manager->lock);
     prev = BRSetGet(manager->blocks, &block->prevBlock);
 
@@ -1274,6 +1301,10 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         
         BRSetAdd(manager->blocks, block);
         manager->lastBlock = block;
+        
+        // clear some memory
+        _BRPeerManagerClearMemory(manager);
+        
         if (txCount > 0) _BRPeerManagerUpdateTx(manager, txHashes, txCount, block->height, txTime);
         if (manager->downloadPeer) BRPeerSetCurrentBlockHeight(manager->downloadPeer, block->height);
             
@@ -1282,10 +1313,11 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
             manager->connectFailureCount = 0; // reset failure count once we know our initial request didn't timeout
         }
         
-        if ((block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) saveCount = 1; // save transition block immediately
+        if ((block->height % SAVE_BLOCK_INTERVAL) == 0)
+            saveCount = SAVE_BLOCK_COUNT; // save transition block immediately
         
         if (block->height == manager->estimatedHeight) { // chain download is complete
-            saveCount = (block->height % BLOCK_DIFFICULTY_INTERVAL) + BLOCK_DIFFICULTY_INTERVAL + 1;
+            saveCount = SAVE_BLOCK_COUNT;
             _BRPeerManagerLoadMempools(manager);
         }
     }
@@ -1295,7 +1327,8 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         }
         
         b = manager->lastBlock;
-        while (b && b->height > block->height) b = BRSetGet(manager->blocks, &b->prevBlock); // is block in main chain?
+        while (b && b->height > block->height)
+            b = BRSetGet(manager->blocks, &b->prevBlock); // is block in main chain?
         
         if (BRMerkleBlockEq(b, block)) { // if it's not on a fork, set block heights for its transactions
             if (txCount > 0) _BRPeerManagerUpdateTx(manager, txHashes, txCount, block->height, txTime);
@@ -1303,8 +1336,10 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         }
         
         b = BRSetAdd(manager->blocks, block);
-
+        
+        // check if another block with equal hash existed
         if (b != block) {
+            // remove the block from orphans, if it exists
             if (BRSetGet(manager->orphans, b) == b) BRSetRemove(manager->orphans, b);
             if (manager->lastOrphan == b) manager->lastOrphan = NULL;
             BRMerkleBlockFree(b);
@@ -1361,7 +1396,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
             manager->lastBlock = block;
             
             if (block->height == manager->estimatedHeight) { // chain download is complete
-                saveCount = (block->height % BLOCK_DIFFICULTY_INTERVAL) + BLOCK_DIFFICULTY_INTERVAL + 1;
+                saveCount = SAVE_BLOCK_COUNT;
                 _BRPeerManagerLoadMempools(manager);
             }
         }
@@ -1377,22 +1412,23 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         next = BRSetRemove(manager->orphans, &orphan);
     }
     
-    BRMerkleBlock *saveBlocks[saveCount];
+    BRMerkleBlock* saveBlocks[saveCount]; // zero length arrays are allowed in C standard
+    memset(&saveBlocks[0], 0, saveCount * sizeof(BRMerkleBlock*));
     
     for (i = 0, b = block; b && i < saveCount; i++) {
-        //FIXME: In the Breadwallet Core, that team asserts that a block does not have an unknown height in order to prevent saving orphans.  That leads to a hard crash.
         if (b->height != BLOCK_UNKNOWN_HEIGHT) {
             saveBlocks[i] = b;
             b = BRSetGet(manager->blocks, &b->prevBlock);
         }
     }
     
-    // make sure the set of blocks to be saved starts at a difficulty interval
-    j = (i > 0) ? saveBlocks[i - 1]->height % BLOCK_DIFFICULTY_INTERVAL : 0;
-    if (j > 0) i -= (i > BLOCK_DIFFICULTY_INTERVAL - j) ? BLOCK_DIFFICULTY_INTERVAL - j : i;
-    assert(i == 0 || (saveBlocks[i - 1]->height % BLOCK_DIFFICULTY_INTERVAL) == 0);
+    /* save the blocks */
     pthread_mutex_unlock(&manager->lock);
-    if (i > 0 && manager->saveBlocks) manager->saveBlocks(manager->info, (i > 1 ? 1 : 0), saveBlocks, i);
+    
+    if (i > 0 && manager->saveBlocks) {
+        debug_log("[STATS]: orphan_count = %ld, block_count = %ld\n", BRSetCount(manager->orphans), BRSetCount(manager->blocks));
+        manager->saveBlocks(manager->info, REPLACE_SAVED_BLOCKS, saveBlocks, i);
+    }
     
     if (block && block->height != BLOCK_UNKNOWN_HEIGHT && block->height >= BRPeerLastBlock(peer) &&
         manager->txStatusUpdate) {
@@ -1571,11 +1607,16 @@ BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, u
     block = NULL;
     
     for (size_t i = 0; blocks && i < blocksCount; i++) {
-        assert(blocks[i]->height != BLOCK_UNKNOWN_HEIGHT); // height must be saved/restored along with serialized block
+        
+        // height must be saved/restored along with serialized block
+        assert(blocks[i]->height != BLOCK_UNKNOWN_HEIGHT);
+        
+        // add to orphans
         BRSetAdd(manager->orphans, blocks[i]);
 
-        if ((blocks[i]->height % BLOCK_DIFFICULTY_INTERVAL) == 0 &&
-            (! block || blocks[i]->height > block->height)) block = blocks[i]; // find last transition block
+        // find last transition block
+        if (!block || blocks[i]->height > block->height)
+            block = blocks[i];
     }
     
     while (block) {

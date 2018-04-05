@@ -48,6 +48,17 @@
 #define _peer_log(...) printf(__VA_ARGS__)
 #endif
 
+#if defined(TARGET_OS_MAC)
+    #include <Foundation/Foundation.h>
+    #define debug_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+    #include <android/log.h>
+    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+    #include <stdio.h>
+    #define debug_log(...) printf(__VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

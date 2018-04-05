@@ -356,29 +356,21 @@ int BRMerkleBlockContainsTxHash(const BRMerkleBlock *block, UInt256 txHash)
 // transitionTime is the timestamp of the block at the previous difficulty transition
 // transitionTime may be 0 if block->height is not a multiple of BLOCK_DIFFICULTY_INTERVAL
 //
-// The difficulty target algorithm works as follows:
-// The target must be the same as in the previous block unless the block's height is a multiple of 2016. Every 2016
-// blocks there is a difficulty transition where a new difficulty is calculated. The new target is the previous target
-// multiplied by the time between the last transition block's timestamp and this one (in seconds), divided by the
-// targeted time between transitions (14*24*60*60 seconds). If the new difficulty is more than 4x or less than 1/4 of
-// the previous difficulty, the change is limited to either 4x or 1/4. There is also a minimum difficulty value
-// intuitively named MAX_PROOF_OF_WORK... since larger values are less difficult.
+// The difficulty target algorithm is called Multishield.
 int BRMerkleBlockVerifyDifficulty(const BRMerkleBlock *block, const BRMerkleBlock *previous, uint32_t transitionTime)
 {
     int r = 1;
-    
     assert(block != NULL);
-    assert(previous != NULL);
     
-    if (! previous || !UInt256Eq(block->prevBlock, previous->blockHash) || block->height != previous->height + 1) r = 0;
-    if (r && (block->height % BLOCK_DIFFICULTY_INTERVAL) == 0 && transitionTime == 0) r = 0;
-        
+    if (!previous || !UInt256Eq(block->prevBlock, previous->blockHash) || block->height != previous->height + 1)
+        r = 0;
+
 #if BITCOIN_TESTNET
     // TODO: implement testnet difficulty rule check
     return r; // don't worry about difficulty on testnet for now
 #endif
 
-    // TODO: fix difficulty target check for Digibyte
+    // TODO: fix difficulty target check for Digibyte (Multishield)
     /*if (r && (block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) {
         // target is in "compact" format, where the most significant byte is the size of resulting value in bytes, next
         // bit is the sign, and the remaining 23bits is the value after having been right shifted by (size - 3)*8 bits
