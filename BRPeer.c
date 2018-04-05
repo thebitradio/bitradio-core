@@ -43,11 +43,6 @@
 #include <netinet/in.h> 
 #include <arpa/inet.h>
 
-#if BITCOIN_TESTNET
-#define MAGIC_NUMBER 0xdab6c3fau //TODO: When the testnet becomes available update this value
-#else
-#define MAGIC_NUMBER 0xdab6c3fa
-#endif
 #define HEADER_LENGTH      24
 #define MAX_MSG_LENGTH     0x02000000u
 #define MAX_GETDATA_HASHES 50000
@@ -95,6 +90,7 @@ typedef enum {
 
 typedef struct {
     BRPeer peer; // superstruct on top of BRPeer
+    uint32_t magicNumber;
     char host[INET6_ADDRSTRLEN];
     BRPeerStatus status;
     int waitingForNetwork;
@@ -958,7 +954,7 @@ static void *_peerThreadRoutine(void *arg)
                     ctx->mempoolTime = DBL_MAX;
                 }
                 
-                while (sizeof(uint32_t) <= len && UInt32GetLE(header) != MAGIC_NUMBER) {
+                while (sizeof(uint32_t) <= len && UInt32GetLE(header) != ctx->magicNumber) {
                     memmove(header, &header[1], --len); // consume one byte at a time until we find the magic number
                 }
                 
@@ -1049,11 +1045,12 @@ static void _dummyThreadCleanup(void *info)
 }
 
 // returns a newly allocated BRPeer struct that must be freed by calling BRPeerFree()
-BRPeer *BRPeerNew(void)
+BRPeer *BRPeerNew(uint32_t magicNumber)
 {
     BRPeerContext *ctx = calloc(1, sizeof(*ctx));
     
     assert(ctx != NULL);
+    ctx->magicNumber = magicNumber;
     array_new(ctx->useragent, 40);
     array_new(ctx->knownBlockHashes, 10);
     array_new(ctx->currentBlockTxHashes, 10);
@@ -1262,7 +1259,7 @@ void BRPeerSendMessage(BRPeer *peer, const uint8_t *msg, size_t msgLen, const ch
         struct timeval tv;
         int socket, error = 0;
         
-        UInt32SetLE(&buf[off], MAGIC_NUMBER);
+        UInt32SetLE(&buf[off], ctx->magicNumber);
         off += sizeof(uint32_t);
         strncpy((char *)&buf[off], type, 12);
         off += 12;
@@ -1315,7 +1312,7 @@ void BRPeerSendVersionMessage(BRPeer *peer)
     off += sizeof(uint64_t);
     UInt128Set(&msg[off], LOCAL_HOST); // IPv4 mapped IPv6 header
     off += sizeof(UInt128);
-    UInt16SetBE(&msg[off], STANDARD_PORT);
+    UInt16SetBE(&msg[off], peer->port);
     off += sizeof(uint16_t);
     ctx->nonce = ((uint64_t)BRRand(0) << 32) | (uint64_t)BRRand(0); // random nonce
     UInt64SetLE(&msg[off], ctx->nonce);
