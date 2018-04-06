@@ -40,7 +40,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <netinet/in.h>	
+#include <netinet/in.h> 
 #include <arpa/inet.h>
 
 #define HEADER_LENGTH      24
@@ -455,7 +455,7 @@ static int _BRPeerAcceptHeadersMessage(BRPeer *peer, const uint8_t *msg, size_t 
         // To improve chain download performance, if this message contains 2000 headers then request the next 2000
         // headers immediately, and switch to requesting blocks when we receive a header newer than earliestKeyTime
         uint32_t timestamp = (count > 0) ? UInt32GetLE(&msg[off + 81*(count - 1) + 68]) : 0;
-    
+
         if (count >= 2000 || (timestamp > 0 && timestamp + 7*24*60*60 + BLOCK_MAX_TIME_DRIFT >= ctx->earliestKeyTime)) {
             size_t last = 0;
             time_t now = time(NULL);
