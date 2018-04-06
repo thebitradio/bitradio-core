@@ -112,10 +112,10 @@ static int BRTestNetVerifyDifficulty(const BRMerkleBlock *block, const BRMerkleB
     int r = 1;
     
     assert(block != NULL);
-    assert(previous != NULL);
     
-    if (! previous || !UInt256Eq(block->prevBlock, previous->blockHash) || block->height != previous->height + 1) r = 0;
-    if (r && (block->height % BLOCK_DIFFICULTY_INTERVAL) == 0 && transitionTime == 0) r = 0;
+    if (! previous || !UInt256Eq(block->prevBlock, previous->blockHash) || block->height != previous->height + 1)
+        r = 0;
+    
     return r;
 }
 
