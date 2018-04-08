@@ -45,7 +45,11 @@
 #define _peer_log(...) __android_log_print(ANDROID_LOG_INFO, "bread", __VA_ARGS__)
 #else
 #include <stdio.h>
-#define _peer_log(...) printf(__VA_ARGS__)
+    #ifdef DEBUG
+        #define _peer_log(...) printf(__VA_ARGS__)
+    #else
+        #define _peer_log(...)
+    #endif
 #endif
 
 #if defined(TARGET_OS_MAC)
@@ -56,7 +60,11 @@
     #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
 #else
     #include <stdio.h>
-    #define debug_log(...) printf(__VA_ARGS__)
+    #ifdef DEBUG
+        #define debug_log(...) printf(__VA_ARGS__)
+    #else
+        #define debug_log(...)
+    #endif
 #endif
 
 #ifdef __cplusplus
