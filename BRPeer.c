@@ -1420,7 +1420,7 @@ void BRPeerSendGetblocks(BRPeer *peer, const UInt256 locators[], size_t locators
     off += sizeof(UInt256);
     
     if (locatorsCount > 0) {
-        peer_log(peer, "calling getblocks with %zu locators: [%s,%s %s]", locatorsCount,
+        peer_log(peer, "calling getblocks with %zu locators: [%s, %s %s]", locatorsCount,
                  log_u256_hex_encode(locators[0]), (locatorsCount > 2 ? " ...," : ""),
                  (locatorsCount > 1 ? log_u256_hex_encode(locators[locatorsCount - 1]) : ""));
         BRPeerSendMessage(peer, msg, off, MSG_GETBLOCKS);
