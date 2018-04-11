@@ -1265,7 +1265,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
     }
     else if (! prev) { // block is an orphan
         peer_log(peer, "relayed orphan block %s, previous %s, last block is %s, height %"PRIu32,
-                 u256hex(block->blockHash), u256hex(block->prevBlock), u256hex(manager->lastBlock->blockHash),
+                 log_u256_hex_encode(block->blockHash), log_u256_hex_encode(block->prevBlock), log_u256_hex_encode(manager->lastBlock->blockHash),
                  manager->lastBlock->height);
         
         if (block->timestamp + 7*24*60*60 < time(NULL)) { // ignore orphans older than one week ago
@@ -1570,7 +1570,14 @@ static void _dummyThreadCleanup(void *info)
 
 // returns a newly allocated BRPeerManager struct that must be freed by calling BRPeerManagerFree()
 BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, uint32_t earliestKeyTime,
-                                BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount)
+                                  BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount)
+{
+    return BRPeerManagerNewEx(params, wallet, earliestKeyTime, blocks, blocksCount, peers, peersCount, NULL);
+}
+
+// returns a newly allocated BRPeerManager struct that must be freed by calling BRPeerManagerFree()
+BRPeerManager *BRPeerManagerNewEx(const BRChainParams *params, BRWallet *wallet, uint32_t earliestKeyTime,
+                                BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount, BRMerkleBlock* startSyncFrom)
 {
     BRPeerManager *manager = calloc(1, sizeof(*manager));
     BRMerkleBlock orphan, *block = NULL;
@@ -1586,24 +1593,36 @@ BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, u
     manager->averageTxPerBlock = 1400;
     manager->maxConnectCount = PEER_MAX_CONNECTIONS;
     array_new(manager->peers, peersCount);
-    if (peers) array_add_array(manager->peers, peers, peersCount);
+    if (peers)
+        array_add_array(manager->peers, peers, peersCount);
     qsort(manager->peers, array_count(manager->peers), sizeof(*manager->peers), _peerTimestampCompare);
     array_new(manager->connectedPeers, PEER_MAX_CONNECTIONS);
+    
     manager->blocks = BRSetNew(BRMerkleBlockHash, BRMerkleBlockEq, blocksCount);
     manager->orphans = BRSetNew(_BRPrevBlockHash, _BRPrevBlockEq, blocksCount); // orphans are indexed by prevBlock
     manager->checkpoints = BRSetNew(_BRBlockHeightHash, _BRBlockHeightEq, 100); // checkpoints are indexed by height
 
+    if (startSyncFrom) {
+        manager->earliestKeyTime = startSyncFrom->timestamp;
+        BRSetAdd(manager->checkpoints, startSyncFrom);
+        BRSetAdd(manager->blocks, startSyncFrom);
+        manager->lastBlock = startSyncFrom;
+    }
+    
     for (size_t i = 0; i < manager->params->checkpointsCount; i++) {
         block = BRMerkleBlockNew();
         block->height = manager->params->checkpoints[i].height;
         block->blockHash = UInt256Reverse(manager->params->checkpoints[i].hash);
         block->timestamp = manager->params->checkpoints[i].timestamp;
         block->target = manager->params->checkpoints[i].target;
+        
         BRSetAdd(manager->checkpoints, block);
         BRSetAdd(manager->blocks, block);
-        if (i == 0 || block->timestamp + 7*24*60*60 < manager->earliestKeyTime) manager->lastBlock = block;
+        
+        if ((i == 0 && !startSyncFrom) || block->timestamp + 7*24*60*60 < manager->earliestKeyTime)
+            manager->lastBlock = block;
     }
-
+    
     block = NULL;
     
     for (size_t i = 0; blocks && i < blocksCount; i++) {
@@ -1627,6 +1646,12 @@ BRPeerManager *BRPeerManagerNew(const BRChainParams *params, BRWallet *wallet, u
         orphan.prevBlock = block->blockHash;
         block = BRSetGet(manager->orphans, &orphan);
     }
+    
+    if (startSyncFrom) {
+        manager->lastBlock = startSyncFrom;
+    }
+    
+    printf("[START HEIGHT]: %d\n", manager->lastBlock->height);
     
     array_new(manager->txRelays, 10);
     array_new(manager->txRequests, 10);
@@ -2041,11 +2066,31 @@ void BRPeerManagerFree(BRPeerManager *manager)
     free(manager);
 }
 
+/*
+ * The following two methods sync the blockchain beginning from startBlock.
+ *
+ * Usage: Create a custom merkle block and pass it to BPPeerManagerMainNetNewEx()
+ *     BRMerkleBlock* test = BRMerkleBlockNew();
+ *     test->blockHash = UInt256Reverse(uint256("7497ea1b465eb39f1c8f507bc877078fe016d6fcb6dfad3a64c98dcc6e1e8496"));
+ *     test->height = 0;
+ *     test->timestamp = 1389388394;
+ *     test->target = 0x1e0ffff0;
+ */
+
+BRPeerManager* BPPeerManagerMainNetNewEx(BRWallet *wallet, uint32_t earliestKeyTime, BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount, BRMerkleBlock* startBlock) {
+    return BRPeerManagerNewEx(&BRMainNetParams, wallet, earliestKeyTime, blocks, blocksCount, peers, peersCount, startBlock);
+}
+BRPeerManager* BPPeerManagerTestNetNewEx(BRWallet *wallet, uint32_t earliestKeyTime, BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount, BRMerkleBlock* startBlock) {
+    return BRPeerManagerNewEx(&BRTestNetParams, wallet, earliestKeyTime,blocks, blocksCount, peers, peersCount, startBlock);
+}
 
 // function to create Peermanager under for the mainnet directly
 BRPeerManager *BPPeerManagerMainNetNew(BRWallet *wallet, uint32_t earliestKeyTime,
 									   BRMerkleBlock *blocks[], size_t blocksCount, const BRPeer peers[], size_t peersCount) {
-	return BRPeerManagerNew(&BRMainNetParams, wallet, earliestKeyTime,blocks, blocksCount, peers,peersCount);
+
+
+    
+    return BRPeerManagerNew(&BRMainNetParams, wallet, earliestKeyTime, blocks, blocksCount, peers, peersCount);
 }
 
 // function to create Peermanager under for the testnet directly
