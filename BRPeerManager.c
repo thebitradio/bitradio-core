@@ -1393,6 +1393,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
                 if (count > 0) BRWalletUpdateTransactions(manager->wallet, txHashes, count, height, timestamp);
             }
         
+            if (block)
             manager->lastBlock = block;
             
             if (block->height == manager->estimatedHeight) { // chain download is complete
@@ -1651,7 +1652,7 @@ BRPeerManager *BRPeerManagerNewEx(const BRChainParams *params, BRWallet *wallet,
         manager->lastBlock = startSyncFrom;
     }
     
-    printf("[START HEIGHT]: %d\n", manager->lastBlock->height);
+    printf("Starting sync from height: %d\n", manager->lastBlock->height);
     
     array_new(manager->txRelays, 10);
     array_new(manager->txRequests, 10);
@@ -1839,7 +1840,9 @@ void BRPeerManagerRescan(BRPeerManager *manager)
             if (i - 1 == 0 || manager->params->checkpoints[i - 1].timestamp + 7*24*60*60 < manager->earliestKeyTime) {
                 UInt256 hash = UInt256Reverse(manager->params->checkpoints[i - 1].hash);
 
-                manager->lastBlock = BRSetGet(manager->blocks, &hash);
+                BRMerkleBlock* temp = BRSetGet(manager->blocks, &hash);
+                if (temp != NULL)
+                    manager->lastBlock = temp;
                 break;
             }
         }
