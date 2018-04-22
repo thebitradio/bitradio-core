@@ -177,6 +177,7 @@ struct BRPeerManagerStruct {
     double fpRate, averageTxPerBlock;
     BRSet *blocks, *orphans, *checkpoints;
     BRMerkleBlock *lastBlock, *lastOrphan;
+    BRMerkleBlock *startSyncFrom;
     BRTxPeerList *txRelays, *txRequests;
     BRPublishedTx *publishedTx;
     UInt256 *publishedTxHashes;
@@ -190,6 +191,11 @@ struct BRPeerManagerStruct {
     void (*threadCleanup)(void *info);
     pthread_mutex_t lock;
 };
+
+void BRPeerManagerSetStartBlock(BRPeerManager* manager, BRMerkleBlock* start) {
+    if (!manager || !start) return;
+    manager->startSyncFrom = start;
+}
 
 static void _BRPeerManagerPeerMisbehavin(BRPeerManager *manager, BRPeer *peer)
 {
@@ -1393,6 +1399,7 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
                 if (count > 0) BRWalletUpdateTransactions(manager->wallet, txHashes, count, height, timestamp);
             }
         
+            if (block)
             manager->lastBlock = block;
             
             if (block->height == manager->estimatedHeight) { // chain download is complete
@@ -1601,8 +1608,10 @@ BRPeerManager *BRPeerManagerNewEx(const BRChainParams *params, BRWallet *wallet,
     manager->blocks = BRSetNew(BRMerkleBlockHash, BRMerkleBlockEq, blocksCount);
     manager->orphans = BRSetNew(_BRPrevBlockHash, _BRPrevBlockEq, blocksCount); // orphans are indexed by prevBlock
     manager->checkpoints = BRSetNew(_BRBlockHeightHash, _BRBlockHeightEq, 100); // checkpoints are indexed by height
-
+    manager->startSyncFrom = NULL;
+    
     if (startSyncFrom) {
+        manager->startSyncFrom = startSyncFrom;
         manager->earliestKeyTime = startSyncFrom->timestamp;
         BRSetAdd(manager->checkpoints, startSyncFrom);
         BRSetAdd(manager->blocks, startSyncFrom);
@@ -1651,7 +1660,8 @@ BRPeerManager *BRPeerManagerNewEx(const BRChainParams *params, BRWallet *wallet,
         manager->lastBlock = startSyncFrom;
     }
     
-    printf("[START HEIGHT]: %d\n", manager->lastBlock->height);
+    printf("Starting sync from height: %d\n", manager->lastBlock->height);
+    printf("Starting sync from timestamp: %d\n", manager->lastBlock->timestamp);
     
     array_new(manager->txRelays, 10);
     array_new(manager->txRequests, 10);
@@ -1835,12 +1845,22 @@ void BRPeerManagerRescan(BRPeerManager *manager)
     
     if (manager->isConnected) {
         // start the chain download from the most recent checkpoint that's at least a week older than earliestKeyTime
-        for (size_t i = manager->params->checkpointsCount; i > 0; i--) {
-            if (i - 1 == 0 || manager->params->checkpoints[i - 1].timestamp + 7*24*60*60 < manager->earliestKeyTime) {
-                UInt256 hash = UInt256Reverse(manager->params->checkpoints[i - 1].hash);
+        
+        if (manager->startSyncFrom != NULL) {
+            // There is a block, from which we want to start the sync
+            // startSyncFrom must be added in initialization
+            manager->lastBlock = manager->startSyncFrom;
+            BRSetAdd(manager->blocks, manager->lastBlock);
+        } else {
+            for (size_t i = manager->params->checkpointsCount; i > 0; i--) {
+                if (i - 1 == 0 || manager->params->checkpoints[i - 1].timestamp + 7*24*60*60 < manager->earliestKeyTime) {
+                    UInt256 hash = UInt256Reverse(manager->params->checkpoints[i - 1].hash);
 
-                manager->lastBlock = BRSetGet(manager->blocks, &hash);
-                break;
+                    BRMerkleBlock* temp = BRSetGet(manager->blocks, &hash);
+                    if (temp != NULL)
+                        manager->lastBlock = temp;
+                    break;
+                }
             }
         }
         

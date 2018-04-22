@@ -102,6 +102,9 @@ void BRPeerManagerSetCallbacks(BRPeerManager *manager, void *info,
 // set address to UINT128_ZERO to revert to default behavior
 void BRPeerManagerSetFixedPeer(BRPeerManager *manager, UInt128 address, uint16_t port);
 
+// sets a custom start block
+void BRPeerManagerSetStartBlock(BRPeerManager* manager, BRMerkleBlock* start);
+    
 // current connect status
 BRPeerStatus BRPeerManagerConnectStatus(BRPeerManager *manager);
 
