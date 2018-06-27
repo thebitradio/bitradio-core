@@ -22,6 +22,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
+/*
+ * ToDo: Replace DIGIBYTE_PUBKEY_LEGACY
+*/
+
 #include "BRKey.h"
 #include "BRAddress.h"
 #include "BRBase58.h"
@@ -32,7 +36,6 @@
 
 #define BITCOIN_PRIVKEY      128
 #define BITCOIN_PRIVKEY_TEST 239
-#define BITCOIN_PRIVKEY_OLD  158
 
 #if __BIG_ENDIAN__ || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) ||\
     __ARMEB__ || __THUMBEB__ || __AARCH64EB__ || __MIPSEB__
@@ -131,12 +134,11 @@ int BRPrivKeyIsValid(const char *privKey)
     strLen = strlen(privKey);
     
     if (dataLen == 33 || dataLen == 34) { // wallet import format: https://en.bitcoin.it/wiki/Wallet_import_format
-        if(data[0] == BITCOIN_PRIVKEY) {
-            r = 1;
-        }
-        if(data[0] == BITCOIN_PRIVKEY_OLD) {
-            r = 1;
-        }
+#if BITCOIN_TESTNET
+        r = (data[0] == BITCOIN_PRIVKEY_TEST);
+#else
+        r = (data[0] == BITCOIN_PRIVKEY);
+#endif
     }
     else if ((strLen == 30 || strLen == 22) && privKey[0] == 'S') { // mini private key format
         char s[strLen + 2];
@@ -293,7 +295,7 @@ size_t BRKeyAddress(BRKey *key, char *addr, size_t addrLen)
     assert(key != NULL);
     
     hash = BRKeyHash160(key);
-    data[0] = BITCOIN_PUBKEY_ADDRESS;
+    data[0] = DIGIBYTE_PUBKEY_LEGACY;
 #if BITCOIN_TESTNET
     data[0] = BITCOIN_PUBKEY_ADDRESS_TEST;
 #endif
