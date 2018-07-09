@@ -34,8 +34,9 @@
 #include <assert.h>
 #include <pthread.h>
 
-#define BITCOIN_PRIVKEY      128
-#define BITCOIN_PRIVKEY_TEST 239
+#define BITCOIN_PRIVKEY        128
+#define BITCOIN_PRIVKEY_LEGACY 158
+#define BITCOIN_PRIVKEY_TEST   239
 
 #if __BIG_ENDIAN__ || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) ||\
     __ARMEB__ || __THUMBEB__ || __AARCH64EB__ || __MIPSEB__
@@ -137,7 +138,12 @@ int BRPrivKeyIsValid(const char *privKey)
 #if BITCOIN_TESTNET
         r = (data[0] == BITCOIN_PRIVKEY_TEST);
 #else
-        r = (data[0] == BITCOIN_PRIVKEY);
+        if(data[0] == BITCOIN_PRIVKEY) {
+            r = 1;
+        }
+        if(data[0] == BITCOIN_PRIVKEY_LEGACY) {
+            r = 1;
+        }
 #endif
     }
     else if ((strLen == 30 || strLen == 22) && privKey[0] == 'S') { // mini private key format

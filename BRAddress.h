@@ -41,11 +41,9 @@ extern "C" {
 // See https://en.bitcoin.it/wiki/List_of_address_prefixes and
 // https://github.com/libbitcoin/libbitcoin/wiki/Altcoin-Version-Mappings
 #define DIGIBYTE_PUBKEY_LEGACY                30 // "D"
-#define DIGIBYTE_PUBKEY_MUTLISIG_LEGACY       5  // "3"
-#define DIGIBYTE_PUBKEY_MULTISIG              63 // "S"
+#define DIGIBYTE_SCRIPT_ADDRESS_LEGACY        5  // "3"
+#define DIGIBYTE_SCRIPT_ADDRESS               63
 #define DIGIBYTE_PUBKEY_BECH32                "dgb"
-    
-#define DIGIBYTE_SCRIPT_ADDRESS 63 // "S"
     
 #define BITCOIN_PUBKEY_ADDRESS_TEST 111  //TODO: Replace these values when the testnet becomes available.
 #define BITCOIN_SCRIPT_ADDRESS_TEST 196  //TODO: Replace these values when the testnet becomes available.

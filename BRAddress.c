@@ -339,7 +339,7 @@ size_t BRAddressFromWitness(char *addr, size_t addrLen, const uint8_t *witness, 
 // returns the number of bytes written, or scriptLen needed if script is NULL
 size_t BRAddressScriptPubKey(uint8_t *script, size_t scriptLen, const char *addr)
 {
-    uint8_t pubkeyAddress = DIGIBYTE_PUBKEY_LEGACY, scriptAddress = DIGIBYTE_SCRIPT_ADDRESS;
+    uint8_t pubkeyAddress = DIGIBYTE_PUBKEY_LEGACY, scriptAddress = DIGIBYTE_SCRIPT_ADDRESS, scriptAddressLegacy = DIGIBYTE_SCRIPT_ADDRESS_LEGACY;
     uint8_t data[42];
     char hrp[84], bech32Prefix[] = "dgb";
     size_t dataLen, r = 0;
@@ -365,7 +365,7 @@ size_t BRAddressScriptPubKey(uint8_t *script, size_t scriptLen, const char *addr
             
             r = (! script || 25 <= scriptLen) ? 25 : 0;
         }
-        else if (data[0] == scriptAddress) {
+        else if (data[0] == scriptAddress || data[0] == scriptAddressLegacy) {
             if (script && 23 <= scriptLen) {
                 script[0] = OP_HASH160;
                 script[1] = 20;
@@ -398,8 +398,8 @@ int BRAddressIsValid(const char *addr)
     assert(addr != NULL);
     
     if (BRBase58CheckDecode(data, sizeof(data), addr) == 21) {
-        r = (data[0] == DIGIBYTE_PUBKEY_LEGACY || data[0] == DIGIBYTE_PUBKEY_MUTLISIG_LEGACY);
-        if (!r) r = (data[0] == DIGIBYTE_PUBKEY_MULTISIG); // check new multisig
+        r = (data[0] == DIGIBYTE_PUBKEY_LEGACY || data[0] == DIGIBYTE_SCRIPT_ADDRESS_LEGACY);
+        if (!r) r = (data[0] == DIGIBYTE_SCRIPT_ADDRESS); // check new multisig
     
 #if BITCOIN_TESTNET
         r = (data[0] == BITCOIN_PUBKEY_ADDRESS_TEST || data[0] == BITCOIN_SCRIPT_ADDRESS_TEST);
