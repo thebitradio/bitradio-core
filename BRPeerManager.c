@@ -46,6 +46,13 @@
 
 #define genesis_block_hash(params) UInt256Reverse((params)->checkpoints[0].hash)
 
+// Since many users experience data corruption issues on iOS, we
+//  implement the following procedure in order to prevent the issues.
+// We will pass 0xAAAAAAAAAAAAAAAA to the native side (iOS/android), which will then check its value before saving the blocks.
+// Important: stackIntegrityCheck_val is marked as volatile memory in order to prevent the compiler from optimizing this variable to a constant.
+// Explanation: Assuming that the saveBlocks callback gets called successfully, the stack has to be valid in that very moment. So it's not the stack that's corrupted when calling the callback, but rather the allocated memory of the c-application. Perhaps iOS is killing the C part of the app first, shortly after that, it's killing the native side. Between these two, memory corruption can occur.
+volatile uint64_t stackIntegrityCheck = 0xAAAAAAAAAAAAAAAA;
+
 typedef struct {
     BRPeerManager *manager;
     const char *hostname;
@@ -185,7 +192,7 @@ struct BRPeerManagerStruct {
     void (*syncStarted)(void *info);
     void (*syncStopped)(void *info, int error);
     void (*txStatusUpdate)(void *info);
-    void (*saveBlocks)(void *info, int replace, BRMerkleBlock *blocks[], size_t blocksCount);
+    void (*saveBlocks)(void *info, int replace, BRMerkleBlock *blocks[], size_t blocksCount, uint64_t* stackIntegrityCheck);
     void (*savePeers)(void *info, int replace, const BRPeer peers[], size_t peersCount);
     int (*networkIsReachable)(void *info);
     void (*threadCleanup)(void *info);
@@ -1429,12 +1436,14 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
         }
     }
     
+
+    
     /* save the blocks */
     pthread_mutex_unlock(&manager->lock);
     
     if (i > 0 && manager->saveBlocks) {
         debug_log("[STATS]: orphan_count = %ld, block_count = %ld\n", BRSetCount(manager->orphans), BRSetCount(manager->blocks));
-        manager->saveBlocks(manager->info, REPLACE_SAVED_BLOCKS, saveBlocks, i);
+        manager->saveBlocks(manager->info, REPLACE_SAVED_BLOCKS, saveBlocks, i, (uint64_t*) &stackIntegrityCheck);
     }
     
     if (block && block->height != BLOCK_UNKNOWN_HEIGHT && block->height >= BRPeerLastBlock(peer) &&
@@ -1687,7 +1696,7 @@ void BRPeerManagerSetCallbacks(BRPeerManager *manager, void *info,
                                void (*syncStarted)(void *info),
                                void (*syncStopped)(void *info, int error),
                                void (*txStatusUpdate)(void *info),
-                               void (*saveBlocks)(void *info, int replace, BRMerkleBlock *blocks[], size_t blocksCount),
+                               void (*saveBlocks)(void *info, int replace, BRMerkleBlock *blocks[], size_t blocksCount, uint64_t* memIntegrityCheck),
                                void (*savePeers)(void *info, int replace, const BRPeer peers[], size_t peersCount),
                                int (*networkIsReachable)(void *info),
                                void (*threadCleanup)(void *info))
