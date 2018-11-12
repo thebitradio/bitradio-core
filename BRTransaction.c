@@ -526,7 +526,7 @@ int BRTransactionIsSigned(const BRTransaction *tx)
     assert(tx != NULL);
     
     for (size_t i = 0; tx && i < tx->inCount; i++) {
-        if (! tx->inputs[i].signature) return 0;
+        if (! tx->inputs[i].signature  || tx->inputs[i].sigLen == 0) return 0;
     }
 
     return (tx) ? 1 : 0;
