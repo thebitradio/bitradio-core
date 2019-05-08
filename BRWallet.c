@@ -590,6 +590,17 @@ BRTransaction *BRWalletCreateTxForOutputs(BRWallet *wallet, const BRTxOutput out
     for (i = 0; i < array_count(wallet->utxos); i++) {
         o = &wallet->utxos[i];
         tx = BRSetGet(wallet->allTx, o);
+
+        //Skip utxo that contain assets
+        for (int i = 0; i < sizeof(tx->outputs); i++) {
+            if (tx->outputs[i].script[0] == 4 &&
+                tx->outputs[i].script[1] == 4 &&
+                tx->outputs[i].script[2] == 4 &&
+                tx->outputs[i].script[3] == 1) {
+                continue;
+            }
+        }
+
         if (! tx || o->n >= tx->outCount) continue;
         BRTransactionAddInput(transaction, tx->txHash, o->n, tx->outputs[o->n].amount,
                               tx->outputs[o->n].script, tx->outputs[o->n].scriptLen, NULL, 0, TXIN_SEQUENCE);

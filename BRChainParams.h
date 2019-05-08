@@ -46,12 +46,14 @@ typedef struct {
 } BRChainParams;
 
 static const char *BRMainNetDNSSeeds[] = {
-		"digiexplorer.info",
-		"digihash.co",
-		"seed.digibyte.io",
+        "seed.digibyteservers.io",
+        "seed2.hashdragon.com",
+        "dgb.cryptoservices.net",
+        "digiexplorer.info",
         "seed1.digibyte.io",
         "seed2.digibyte.io",
-        "seed3.digibyte.io", NULL
+        "seed3.digibyte.io",
+        "digihash.co", NULL
 };
 
 static const char *BRTestNetDNSSeeds[] = {

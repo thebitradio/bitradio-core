@@ -28,7 +28,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define BIP32_SEED_KEY "DigiByte seed"
+#define BIP32_SEED_KEY "Bitcoin seed"
 #define BIP32_XPRV     "\x04\x88\xAD\xE4"
 #define BIP32_XPUB     "\x04\x88\xB2\x1E"
 
