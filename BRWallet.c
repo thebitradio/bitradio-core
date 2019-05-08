@@ -171,7 +171,8 @@ static void _BRWalletUpdateBalance(BRWallet *wallet)
         //Skip utxo that contain assets
         int assetFound = 0;
         for (int p = 0; p < sizeof(tx->outputs); p++) {
-            if (tx->outputs[p].script[0] == 4 &&
+            if (tx->outputs[p].scriptLen == 4 &&
+                tx->outputs[p].script[0] == 4 &&
                 tx->outputs[p].script[1] == 4 &&
                 tx->outputs[p].script[2] == 4 &&
                 tx->outputs[p].script[3] == 1) {
@@ -609,7 +610,8 @@ BRTransaction *BRWalletCreateTxForOutputs(BRWallet *wallet, const BRTxOutput out
         //Skip utxo that contain assets
         int assetFound = 0;
         for (int p = 0; p < sizeof(tx->outputs); p++) {
-            if (tx->outputs[p].script[0] == 4 &&
+            if (tx->outputs[p].scriptLen == 4 &&
+                tx->outputs[p].script[0] == 4 &&
                 tx->outputs[p].script[1] == 4 &&
                 tx->outputs[p].script[2] == 4 &&
                 tx->outputs[p].script[3] == 1) {
