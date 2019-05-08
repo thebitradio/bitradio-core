@@ -168,6 +168,21 @@ static void _BRWalletUpdateBalance(BRWallet *wallet)
     for (i = 0; i < array_count(wallet->transactions); i++) {
         tx = wallet->transactions[i];
 
+        //Skip utxo that contain assets
+        int assetFound = 0;
+        for (int p = 0; p < sizeof(tx->outputs); p++) {
+            if (tx->outputs[p].script[0] == 4 &&
+                tx->outputs[p].script[1] == 4 &&
+                tx->outputs[p].script[2] == 4 &&
+                tx->outputs[p].script[3] == 1) {
+                assetFound = 1;
+                break;
+            }
+        }
+        if (assetFound) {
+            continue;
+        }
+
         // check if any inputs are invalid or already spent
         if (tx->blockHeight == TX_UNCONFIRMED) {
             for (j = 0, isInvalid = 0; ! isInvalid && j < tx->inCount; j++) {
@@ -592,13 +607,18 @@ BRTransaction *BRWalletCreateTxForOutputs(BRWallet *wallet, const BRTxOutput out
         tx = BRSetGet(wallet->allTx, o);
 
         //Skip utxo that contain assets
-        for (int i = 0; i < sizeof(tx->outputs); i++) {
-            if (tx->outputs[i].script[0] == 4 &&
-                tx->outputs[i].script[1] == 4 &&
-                tx->outputs[i].script[2] == 4 &&
-                tx->outputs[i].script[3] == 1) {
-                continue;
+        int assetFound = 0;
+        for (int p = 0; p < sizeof(tx->outputs); p++) {
+            if (tx->outputs[p].script[0] == 4 &&
+                tx->outputs[p].script[1] == 4 &&
+                tx->outputs[p].script[2] == 4 &&
+                tx->outputs[p].script[3] == 1) {
+                assetFound = 1;
+                break;
             }
+        }
+        if (assetFound) {
+            continue;
         }
 
         if (! tx || o->n >= tx->outCount) continue;
