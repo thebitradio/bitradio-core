@@ -241,7 +241,8 @@ static void _BRWalletUpdateBalance(BRWallet *wallet)
         prevBalance = balance;
     }
 
-    assert(array_count(wallet->balanceHist) == array_count(wallet->transactions));
+    //No longer applicable, balance is not for all transactions considering assets
+    //assert(array_count(wallet->balanceHist) == array_count(wallet->transactions));
     wallet->balance = balance;
 }
 
@@ -1250,15 +1251,11 @@ uint8_t BRAssetFound(BRTransaction *tx)
     //Skip utxo that contain assets
     uint8_t assetFound = 0;
     for (int p = 0; p < tx->outCount; p++) {
-        if (tx->outputs[p].scriptLen >= 8) {
-            uint8_t one = tx->outputs[p].script[0];
-            uint8_t two = tx->outputs[p].script[1];
-            uint8_t three = tx->outputs[p].script[2];
-            uint8_t four = tx->outputs[p].script[3];
-            if (one == '4' && two == '4' && three == '4' && four == '1') {
-                assetFound = 1;
-                break;
-            }
+        uint8_t one = tx->outputs[p].script[0];
+        uint8_t two = tx->outputs[p].script[1];
+        if (one == 0x44 && two == 0x41) {
+            assetFound = 1;
+            break;
         }
     }
     return assetFound;
