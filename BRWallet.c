@@ -1226,39 +1226,39 @@ int64_t BRBitcoinAmount(int64_t localAmount, double price)
     return (localAmount < 0) ? -amount : amount;
 }
 
-char** BRGetUTXO(BRWallet *wallet, uint64_t amount)
+uint8_t BRGetUTXO(BRWallet *wallet, UInt256 *txids, uint64_t amount)
 {
-    char **addresses;
-    array_new(addresses, 1);
     uint64_t balance = 0;
-    for (size_t j = array_count(wallet->utxos); j > 0; j--) {
-        BRTransaction *t = BRSetGet(wallet->allTx, &wallet->utxos[j - 1].hash);
-        if (BRSetContains(wallet->spentOutputs, &wallet->utxos[j - 1]) || BRAssetFound(t)) continue;
-        char *address = t->outputs[wallet->utxos[j - 1].n].address;
-        if (!address) continue;
-        uint64_t utxoAmount = t->outputs[wallet->utxos[j - 1].n].amount;
-        if (!utxoAmount) continue;
-        array_add(addresses, address);
+    uint8_t count = 0;
+    for (size_t j = 0; j < array_count(wallet->transactions) - 1; j++) {
+        BRTransaction *t = wallet->transactions[j];
+        if (BRSetContains(wallet->spentOutputs, &wallet->utxos[j]) || BRAssetFound(t)) continue;
+        UInt256 txid = t->txHash;
+        uint64_t utxoAmount = t->outputs[wallet->utxos[j].n].amount;
+        array_add(txids, txid);
         balance += utxoAmount;
+        count++;
         if (balance >= amount) {
             break;
         }
     }
-    return addresses;
+    return count;
 }
 
 uint8_t BRAssetFound(BRTransaction *tx)
 {
     //Skip utxo that contain assets
     uint8_t assetFound = 0;
-    for (int p = 0; p < sizeof(tx->outputs); p++) {
-        if (tx->outputs[p].scriptLen == 4 &&
-            tx->outputs[p].script[0] == 4 &&
-            tx->outputs[p].script[1] == 4 &&
-            tx->outputs[p].script[2] == 4 &&
-            tx->outputs[p].script[3] == 1) {
-            assetFound = 1;
-            break;
+    for (int p = 0; p < tx->outCount; p++) {
+        if (tx->outputs[p].scriptLen >= 8) {
+            uint8_t one = tx->outputs[p].script[0];
+            uint8_t two = tx->outputs[p].script[1];
+            uint8_t three = tx->outputs[p].script[2];
+            uint8_t four = tx->outputs[p].script[3];
+            if (one == '4' && two == '4' && three == '4' && four == '1') {
+                assetFound = 1;
+                break;
+            }
         }
     }
     return assetFound;
