@@ -550,10 +550,12 @@ int BRTransactionSign(BRTransaction *tx, int forkId, BRKey keys[], size_t keysCo
     
     for (i = 0; tx && i < tx->inCount; i++) {
         BRTxInput *input = &tx->inputs[i];
-        
-        if (! BRAddressFromScriptPubKey(address.s, sizeof(address), input->script, input->scriptLen)) continue;
+
+        if (!BRAddressFromScriptPubKey(address.s, sizeof(address), input->script,
+                                       input->scriptLen))
+            continue;
         j = 0;
-        while (j < keysCount && ! BRAddressEq(&addrs[j], &address)) j++;
+        while (j < keysCount && !BRAddressEq(&addrs[j], &address)) j++;
         if (j >= keysCount) continue;
         
         const uint8_t *elems[BRScriptElements(NULL, 0, input->script, input->scriptLen)];
