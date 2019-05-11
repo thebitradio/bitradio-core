@@ -121,6 +121,8 @@ size_t BRWalletUTXOs(BRWallet *wallet, BRUTXO utxos[], size_t utxosCount);
 uint64_t BRWalletFeePerKb(BRWallet *wallet);
 void BRWalletSetFeePerKb(BRWallet *wallet, uint64_t feePerKb);
 
+BRTransaction *BRWalletCreateTxForRootAssetTransfer(BRWallet *wallet, uint64_t amount, const char *addr, BRAsset *asst)
+
 // returns an unsigned transaction that sends the specified amount from the wallet to the given address
 // result must be freed using BRTransactionFree()
 BRTransaction *BRWalletCreateTransaction(BRWallet *wallet, uint64_t amount, const char *addr);
@@ -199,9 +201,11 @@ int64_t BRLocalAmount(int64_t amount, double price);
 // price is local currency units (i.e. pennies, pence) per bitcoin
 int64_t BRBitcoinAmount(int64_t localAmount, double price);
 
-uint8_t BRGetUTXO(BRWallet *wallet, UInt256 *addresses, uint64_t amount);
+uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount);
 
 uint8_t BRAssetFound(BRTransaction *tx);
+
+uint8_t BRIsAsset(BRTxOutput output);
 
 #ifdef __cplusplus
 }
