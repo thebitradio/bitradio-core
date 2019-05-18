@@ -598,7 +598,7 @@ BRTransaction *BRWalletCreateTxForOutputs(BRWallet *wallet, const BRTxOutput out
 
         if (! tx || o->n >= tx->outCount) continue;
         BRTransactionAddInput(transaction, tx->txHash, o->n, tx->outputs[o->n].amount,
-                              tx->outputs[o->n].script, tx->outputs[o->n].scriptLen, NULL, 0, TXIN_SEQUENCE);
+                              tx->outputs[o->n].script, tx->outputs[o->n].scriptLen, NULL, 0, NULL, 0, TXIN_SEQUENCE);
         
         if (BRTransactionSize(transaction) + TX_OUTPUT_SIZE > TX_MAX_SIZE) { // transaction size-in-bytes too large
             BRTransactionFree(transaction);
@@ -1225,6 +1225,23 @@ int64_t BRBitcoinAmount(int64_t localAmount, double price)
     }
     
     return (localAmount < 0) ? -amount : amount;
+}
+
+void BRFixAssetInputs(BRWallet *wallet, BRTransaction *assetTransaction)
+{
+    for (size_t j = 0; j < array_count(wallet->transactions); j++) {
+        BRTransaction *t = wallet->transactions[j];
+        for (size_t i = 0; i < array_count(assetTransaction->inputs); i++) {
+            BRTxInput input = assetTransaction->inputs[i];
+            if(UInt256Eq(input.txHash, t->txHash)){
+                BRTxOutput output = t->outputs[input.index];
+                BRTxInputSetScript(&input, output.script, output.scriptLen);
+                array_insert(assetTransaction->inputs, (int) array_count(assetTransaction->inputs), input);
+                array_rm(assetTransaction->inputs, i);
+            }
+        }
+    }
+
 }
 
 uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount)

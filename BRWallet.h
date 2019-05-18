@@ -31,6 +31,40 @@
 #include "BRInt.h"
 #include <string.h>
 
+#define wallet_log(...) _wallet_log("%s:%"PRIu16" " _va_first(__VA_ARGS__, NULL) "\n", _va_rest(__VA_ARGS__, NULL))
+#define _va_first(first, ...) first
+#define _va_rest(first, ...) __VA_ARGS__
+
+#if defined(TARGET_OS_MAC)
+#include <Foundation/Foundation.h>
+#define _wallet_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+#include <android/log.h>
+#define _wallet_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+#include <stdio.h>
+    #ifdef DEBUG
+        #define _wallet_log(...) printf(__VA_ARGS__)
+    #else
+        #define _wallet_log(...)
+    #endif
+#endif
+
+#if defined(TARGET_OS_MAC)
+    #include <Foundation/Foundation.h>
+    #define debug_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+    #include <android/log.h>
+    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+    #include <stdio.h>
+    #ifdef DEBUG
+        #define debug_log(...) printf(__VA_ARGS__)
+    #else
+        #define debug_log(...)
+    #endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -204,6 +238,8 @@ uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount);
 uint8_t BRAssetFound(BRTransaction *tx);
 
 uint8_t BRIsAsset(BRTxOutput output);
+
+void BRFixAssetInputs(BRWallet *wallet, BRTransaction *assetTransaction);
 
 #ifdef __cplusplus
 }

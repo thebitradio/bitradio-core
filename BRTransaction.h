@@ -30,6 +30,40 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#define tx_log(...) _tx_log("%s:%"PRIu16" " _va_first(__VA_ARGS__, NULL) "\n", _va_rest(__VA_ARGS__, NULL))
+#define _va_first(first, ...) first
+#define _va_rest(first, ...) __VA_ARGS__
+
+#if defined(TARGET_OS_MAC)
+#include <Foundation/Foundation.h>
+#define _tx_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+#include <android/log.h>
+#define _tx_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+#include <stdio.h>
+    #ifdef DEBUG
+        #define _tx_log(...) printf(__VA_ARGS__)
+    #else
+        #define _tx_log(...)
+    #endif
+#endif
+
+#if defined(TARGET_OS_MAC)
+    #include <Foundation/Foundation.h>
+    #define debug_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+    #include <android/log.h>
+    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+    #include <stdio.h>
+    #ifdef DEBUG
+        #define debug_log(...) printf(__VA_ARGS__)
+    #else
+        #define debug_log(...)
+    #endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,12 +97,15 @@ typedef struct {
     size_t scriptLen;
     uint8_t *signature;
     size_t sigLen;
+    uint8_t *witness;
+    size_t witLen;
     uint32_t sequence;
 } BRTxInput;
 
 void BRTxInputSetAddress(BRTxInput *input, const char *address);
 void BRTxInputSetScript(BRTxInput *input, const uint8_t *script, size_t scriptLen);
 void BRTxInputSetSignature(BRTxInput *input, const uint8_t *signature, size_t sigLen);
+void BRTxInputSetWitness(BRTxInput *input, const uint8_t *witness, size_t witLen);
 
 typedef struct {
     char address[36];
@@ -85,6 +122,7 @@ void BRTxOutputSetScript(BRTxOutput *output, const uint8_t *script, size_t scrip
 
 typedef struct {
     UInt256 txHash;
+    UInt256 wtxHash;
     uint32_t version;
     BRTxInput *inputs;
     size_t inCount;
@@ -112,7 +150,7 @@ size_t BRTransactionSerialize(const BRTransaction *tx, uint8_t *buf, size_t bufL
 // adds an input to tx
 void BRTransactionAddInput(BRTransaction *tx, UInt256 txHash, uint32_t index, uint64_t amount,
                            const uint8_t *script, size_t scriptLen, const uint8_t *signature, size_t sigLen,
-                           uint32_t sequence);
+                           const uint8_t *witness, size_t witLen, uint32_t sequence);
 
 // adds an output to tx
 void BRTransactionAddOutput(BRTransaction *tx, uint64_t amount, const uint8_t *script, size_t scriptLen);
@@ -122,6 +160,9 @@ void BRTransactionShuffleOutputs(BRTransaction *tx);
 
 // size in bytes if signed, or estimated size assuming compact pubkey sigs
 size_t BRTransactionSize(const BRTransaction *tx);
+
+// virtual transaction size as defined by BIP141: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+size_t BRTransactionVSize(const BRTransaction *tx);
 
 // minimum transaction fee needed for tx to relay across the bitcoin network
 uint64_t BRTransactionStandardFee(const BRTransaction *tx);

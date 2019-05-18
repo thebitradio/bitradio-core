@@ -229,6 +229,29 @@ size_t BRScriptPushData(uint8_t *script, size_t scriptLen, const uint8_t *data, 
     return (! script || len <= scriptLen) ? len : 0;
 }
 
+// returns a pointer to the 20byte pubkey-hash, or NULL if none
+const uint8_t *BRScriptPKH(const uint8_t *script, size_t scriptLen)
+{
+    assert(script != NULL || scriptLen == 0);
+    if (! script || scriptLen == 0 || scriptLen > MAX_SCRIPT_LENGTH) return NULL;
+
+    const uint8_t *elems[BRScriptElements(NULL, 0, script, scriptLen)], *r = NULL;
+    size_t l, count = BRScriptElements(elems, sizeof(elems)/sizeof(*elems), script, scriptLen);
+    
+    if (count == 5 && *elems[0] == OP_DUP && *elems[1] == OP_HASH160 && *elems[2] == 20 &&
+        *elems[3] == OP_EQUALVERIFY && *elems[4] == OP_CHECKSIG) {
+        r = BRScriptData(elems[2], &l); // pay-to-pubkey-hash
+    }
+    else if (count == 3 && *elems[0] == OP_HASH160 && *elems[1] == 20 && *elems[2] == OP_EQUAL) {
+        r = BRScriptData(elems[1], &l); // pay-to-script-hash
+    }
+    else if (count == 2 && (*elems[0] == OP_0 || (*elems[0] >= OP_1 && *elems[0] <= OP_16)) && *elems[1] == 20) {
+        r = BRScriptData(elems[1], &l); // pay-to-witness
+    }
+    
+    return r;
+}
+
 // NOTE: It's important here to be permissive with scriptSig (spends) and strict with scriptPubKey (receives). If we
 // miss a receive transaction, only that transaction's funds are missed, however if we accept a receive transaction that
 // we are unable to correctly sign later, then the entire wallet balance after that point would become stuck with the
@@ -245,9 +268,8 @@ size_t BRAddressFromScriptPubKey(char *addr, size_t addrLen, const uint8_t *scri
     const uint8_t *d, *elems[BRScriptElements(NULL, 0, script, scriptLen)];
     char a[91];
     size_t r = 0, l = 0, count = BRScriptElements(elems, sizeof(elems)/sizeof(*elems), script, scriptLen);
-    
-    if (count == 5 && *elems[0] == OP_DUP && *elems[1] == OP_HASH160 && *elems[2] == 20 &&
-        *elems[3] == OP_EQUALVERIFY && *elems[4] == OP_CHECKSIG) {
+    if ((count == 5 || count == 8) && *elems[0] == OP_DUP && *elems[1] == OP_HASH160 && *elems[2] == 20 && *elems[3] == OP_EQUALVERIFY
+        && *elems[4] == OP_CHECKSIG) {
         // pay-to-pubkey-hash scriptPubKey
         data[0] = DIGIBYTE_PUBKEY_LEGACY;
 #if BITCOIN_TESTNET
@@ -325,7 +347,7 @@ size_t BRAddressFromScriptSig(char *addr, size_t addrLen, const uint8_t *script,
     }
     // pay-to-witness scriptSig's are empty
     
-    return (d) ? BRBase58CheckEncode(addr, addrLen, data, 21) : 0;
+    return (d) ? BRBase58CheckEncode(addr, addrLen, data, sizeof(data)) : 0;
 }
 
 // writes the bitcoin address for a witness to addr

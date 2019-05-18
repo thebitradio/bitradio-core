@@ -30,6 +30,36 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#if defined(TARGET_OS_MAC)
+#include <Foundation/Foundation.h>
+#define _addr_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+#include <android/log.h>
+#define _addr_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+#include <stdio.h>
+    #ifdef DEBUG
+        #define _addr_log(...) printf(__VA_ARGS__)
+    #else
+        #define _addr_log(...)
+    #endif
+#endif
+
+#if defined(TARGET_OS_MAC)
+    #include <Foundation/Foundation.h>
+    #define debug_log(...) NSLog(__VA_ARGS__)
+#elif defined(__ANDROID__)
+    #include <android/log.h>
+    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
+#else
+    #include <stdio.h>
+    #ifdef DEBUG
+        #define debug_log(...) printf(__VA_ARGS__)
+    #else
+        #define debug_log(...)
+    #endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -83,6 +113,9 @@ const uint8_t *BRScriptData(const uint8_t *elem, size_t *dataLen);
 // returns the number of bytes written, or scriptLen needed if script is NULL
 size_t BRScriptPushData(uint8_t *script, size_t scriptLen, const uint8_t *data, size_t dataLen);
 
+// returns a pointer to the 20byte pubkey hash, or NULL if none
+const uint8_t *BRScriptPKH(const uint8_t *script, size_t scriptLen);
+
 typedef struct {
     char s[36];
 } BRAddress;
@@ -96,6 +129,10 @@ size_t BRAddressFromScriptPubKey(char *addr, size_t addrLen, const uint8_t *scri
 // writes the bitcoin address for a scriptSig to addr
 // returns the number of bytes written, or addrLen needed if addr is NULL
 size_t BRAddressFromScriptSig(char *addr, size_t addrLen, const uint8_t *script, size_t scriptLen);
+
+// writes the bitcoin address for a witness to addr
+// returns the number of bytes written, or addrLen needed if addr is NULL
+size_t BRAddressFromWitness(char *addr, size_t addrLen, const uint8_t *witness, size_t witLen);
 
 // writes the scriptPubKey for addr to script
 // returns the number of bytes written, or scriptLen needed if script is NULL
