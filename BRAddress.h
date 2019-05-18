@@ -30,36 +30,6 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-#if defined(TARGET_OS_MAC)
-#include <Foundation/Foundation.h>
-#define _addr_log(...) NSLog(__VA_ARGS__)
-#elif defined(__ANDROID__)
-#include <android/log.h>
-#define _addr_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
-#else
-#include <stdio.h>
-    #ifdef DEBUG
-        #define _addr_log(...) printf(__VA_ARGS__)
-    #else
-        #define _addr_log(...)
-    #endif
-#endif
-
-#if defined(TARGET_OS_MAC)
-    #include <Foundation/Foundation.h>
-    #define debug_log(...) NSLog(__VA_ARGS__)
-#elif defined(__ANDROID__)
-    #include <android/log.h>
-    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
-#else
-    #include <stdio.h>
-    #ifdef DEBUG
-        #define debug_log(...) printf(__VA_ARGS__)
-    #else
-        #define debug_log(...)
-    #endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

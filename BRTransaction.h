@@ -30,40 +30,6 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-#define tx_log(...) _tx_log("%s:%"PRIu16" " _va_first(__VA_ARGS__, NULL) "\n", _va_rest(__VA_ARGS__, NULL))
-#define _va_first(first, ...) first
-#define _va_rest(first, ...) __VA_ARGS__
-
-#if defined(TARGET_OS_MAC)
-#include <Foundation/Foundation.h>
-#define _tx_log(...) NSLog(__VA_ARGS__)
-#elif defined(__ANDROID__)
-#include <android/log.h>
-#define _tx_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
-#else
-#include <stdio.h>
-    #ifdef DEBUG
-        #define _tx_log(...) printf(__VA_ARGS__)
-    #else
-        #define _tx_log(...)
-    #endif
-#endif
-
-#if defined(TARGET_OS_MAC)
-    #include <Foundation/Foundation.h>
-    #define debug_log(...) NSLog(__VA_ARGS__)
-#elif defined(__ANDROID__)
-    #include <android/log.h>
-    #define debug_log(...) __android_log_print(ANDROID_LOG_DEBUG, "digiwallet", __VA_ARGS__)
-#else
-    #include <stdio.h>
-    #ifdef DEBUG
-        #define debug_log(...) printf(__VA_ARGS__)
-    #else
-        #define debug_log(...)
-    #endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
