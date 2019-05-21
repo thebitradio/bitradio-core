@@ -1229,6 +1229,8 @@ int64_t BRBitcoinAmount(int64_t localAmount, double price)
 
 void BRFixAssetInputs(BRWallet *wallet, BRTransaction *assetTransaction)
 {
+    BRTxInput *tempInputScripts;
+    array_new(tempInputScripts, assetTransaction->inCount);
     for (size_t j = 0; j < array_count(wallet->transactions); j++) {
         BRTransaction *t = wallet->transactions[j];
         for (size_t i = 0; i < array_count(assetTransaction->inputs); i++) {
@@ -1236,35 +1238,32 @@ void BRFixAssetInputs(BRWallet *wallet, BRTransaction *assetTransaction)
             if(UInt256Eq(input.txHash, t->txHash)){
                 BRTxOutput output = t->outputs[input.index];
                 BRTxInputSetScript(&input, output.script, output.scriptLen);
-                array_insert(assetTransaction->inputs, (int) array_count(assetTransaction->inputs), input);
-                array_rm(assetTransaction->inputs, i);
+                array_add(tempInputScripts, input);
             }
         }
     }
-
+    assetTransaction->inputs = tempInputScripts;
 }
 
 uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount)
 {
     uint64_t balance = 0;
     uint8_t count = 0;
-    for (size_t j = 0; j < array_count(wallet->transactions) - 1; j++) {
-        BRTransaction *t = wallet->transactions[j];
-        //Check if any of the outputs in the transaction contain assets
+    size_t j;
+    BRTransaction *t;
+    for (j = array_count(wallet->utxos); j > 0; j--) {
+        if (BRSetContains(wallet->spentOutputs, &wallet->utxos[j - 1])) continue;
+        t = BRSetGet(wallet->allTx, &wallet->utxos[j - 1].hash);
         if (BRAssetFound(t)) continue;
-        //Check if anything has been spent
-        for (size_t i = 0; i < array_count(t->outputs); i++) {
-            if (!BRSetContains(wallet->spentOutputs, &t->outputs[i]) && *t->outputs[i].address) {
-                uint64_t utxoAmount = *&t->outputs[i].amount;
-                if (utxoAmount > 0) {
-                    array_add(addresses, &t->outputs[i].address);
-                    balance += utxoAmount;
-                    count++;
-                }
-                if (balance >= amount) {
-                    break;
-                }
-            }
+        BRTxOutput *output = &t->outputs[wallet->utxos[j - 1].n];
+        uint64_t utxoAmount = output->amount;
+        if (utxoAmount > 0) {
+            array_add(addresses, output->address);
+            balance += utxoAmount;
+            count++;
+        }
+        if (balance >= amount) {
+            break;
         }
     }
     return count;
