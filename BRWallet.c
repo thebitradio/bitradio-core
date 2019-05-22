@@ -1251,11 +1251,13 @@ uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount)
     uint8_t count = 0;
     size_t j;
     BRTransaction *t;
+    BRTxOutput *output;
     for (j = array_count(wallet->utxos); j > 0; j--) {
         if (BRSetContains(wallet->spentOutputs, &wallet->utxos[j - 1])) continue;
         t = BRSetGet(wallet->allTx, &wallet->utxos[j - 1].hash);
+        output = &t->outputs[wallet->utxos[j - 1].n];
+        if (!BRSetContains(wallet->allAddrs, output->address)) continue;
         if (BRAssetFound(t)) continue;
-        BRTxOutput *output = &t->outputs[wallet->utxos[j - 1].n];
         uint64_t utxoAmount = output->amount;
         if (utxoAmount > 0) {
             array_add(addresses, output->address);
@@ -1272,17 +1274,15 @@ uint8_t BRGetUTXO(BRWallet *wallet, char **addresses, uint64_t amount)
 uint8_t BRAssetFound(BRTransaction *tx)
 {
     //Skip utxo that contain assets
-    uint8_t assetFound = 0;
     for (int p = 0; p < tx->outCount; p++) {
         uint8_t one = tx->outputs[p].script[0];
         uint8_t three = tx->outputs[p].script[2];
         uint8_t four = tx->outputs[p].script[3];
         if (one == 106 && three == 68 && four == 65) {
-            assetFound = 1;
-            break;
+            return 1;
         }
     }
-    return assetFound;
+    return 0;
 }
 
 uint8_t BRIsAsset(BRTxOutput output) {
