@@ -47,8 +47,8 @@
 #define MAX_MSG_LENGTH     0x02000000u
 #define MAX_GETDATA_HASHES 50000
 #define ENABLED_SERVICES   0ULL  // we don't provide full blocks to remote nodes
-#define PROTOCOL_VERSION   70016
-#define MIN_PROTO_VERSION  70002 // peers earlier than this protocol version not supported (need v0.9 txFee relay rules)
+#define PROTOCOL_VERSION   70815
+#define MIN_PROTO_VERSION  70815 // peers earlier than this protocol version not supported (need v0.9 txFee relay rules)
 #define LOCAL_HOST         ((UInt128) { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01 })
 #define CONNECT_TIMEOUT    3.0
 #define MESSAGE_TIMEOUT    10.0
@@ -205,7 +205,7 @@ static int _BRPeerAcceptVersionMessage(BRPeer *peer, const uint8_t *msg, size_t 
         off += sizeof(uint64_t);
         strLen = (size_t)BRVarInt(&msg[off], (off <= msgLen ? msgLen - off : 0), &len);
         off += len;
-
+        
         if (off + strLen + sizeof(uint32_t) > msgLen) {
             peer_log(peer, "malformed version message, length is %zu, should be %zu", msgLen,
                      off + strLen + sizeof(uint32_t));
@@ -690,8 +690,9 @@ static int _BRPeerAcceptMerkleblockMessage(BRPeer *peer, const uint8_t *msg, siz
     // non-tx message is received we should have all the tx in the merkleblock.
     BRPeerContext *ctx = (BRPeerContext *)peer;
     BRMerkleBlock *block = BRMerkleBlockParse(msg, msgLen);
+    
     int r = 1;
-  
+    
     if (! block) {
         peer_log(peer, "malformed merkleblock message with length: %zu", msgLen);
         r = 0;
@@ -708,12 +709,16 @@ static int _BRPeerAcceptMerkleblockMessage(BRPeer *peer, const uint8_t *msg, siz
         block = NULL;
         r = 0;
     }
-    else {
+    else {        
         size_t count = BRMerkleBlockTxHashes(block, NULL, 0);
-        UInt256 _hashes[(sizeof(UInt256)*count <= 0x1000) ? count : 0],
-                *hashes = (sizeof(UInt256)*count <= 0x1000) ? _hashes : malloc(count*sizeof(*hashes));
+        
+        //TODO: These two lines let crash the app on iOS Devices !
+        //UInt256 _hashes[(sizeof(UInt256)*count <= 0x1000) ? count : 0],
+        //        *hashes = (sizeof(UInt256)*count <= 0x1000) ? _hashes : malloc(count*sizeof(*hashes));
+        UInt256 _hashes[128], *hashes = (count <= 128) ? _hashes : malloc(count*sizeof(UInt256));
         
         assert(hashes != NULL);
+        
         count = BRMerkleBlockTxHashes(block, hashes, count);
 
         for (size_t i = count; i > 0; i--) { // reverse order for more efficient removal as tx arrive
@@ -1529,8 +1534,8 @@ void BRPeerFree(BRPeer *peer)
     if (ctx->knownBlockHashes) array_free(ctx->knownBlockHashes);
     if (ctx->knownTxHashes) array_free(ctx->knownTxHashes);
     if (ctx->knownTxHashSet) BRSetFree(ctx->knownTxHashSet);
-    if (ctx->pongInfo) array_free(ctx->pongInfo);
     if (ctx->pongCallback) array_free(ctx->pongCallback);
+    if (ctx->pongInfo) array_free(ctx->pongInfo);
     free(ctx);
 }
 

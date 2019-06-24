@@ -328,6 +328,7 @@ BRTransaction *BRTransactionNew(void)
 
     assert(tx != NULL);
     tx->version = TX_VERSION;
+    
     array_new(tx->inputs, 1);
     array_new(tx->outputs, 2);
     tx->lockTime = TX_LOCKTIME;
@@ -376,6 +377,7 @@ BRTransaction *BRTransactionParse(const uint8_t *buf, size_t bufLen)
     
     tx->version = (off + sizeof(uint32_t) <= bufLen) ? UInt32GetLE(&buf[off]) : 0;
     off += sizeof(uint32_t);
+    
     tx->inCount = (size_t)BRVarInt(&buf[off], (off <= bufLen ? bufLen - off : 0), &len);
     off += len;
     array_set_count(tx->inputs, tx->inCount);
@@ -526,8 +528,7 @@ int BRTransactionIsSigned(const BRTransaction *tx)
     assert(tx != NULL);
     
     for (size_t i = 0; tx && i < tx->inCount; i++) {
-        //if (! tx->inputs[i].signature  || tx->inputs[i].sigLen == 0) return 0; //FIXME: THIS CAUSES A CRASH
-        if (! tx->inputs[i].signature) return 0;
+        if (! tx->inputs[i].signature  || tx->inputs[i].sigLen == 0) return 0;
     }
 
     return (tx) ? 1 : 0;

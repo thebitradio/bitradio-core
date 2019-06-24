@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <inttypes.h>
+#include "crypto/x11/brx11.h"
 #include <string.h>
 
 #ifdef __cplusplus
@@ -95,12 +96,6 @@ void BRPBKDF2(void *dk, size_t dkLen, void (*hash)(void *, const void *, size_t)
 // scrypt key derivation: http://www.tarsnap.com/scrypt.html
 void BRScrypt(void *dk, size_t dkLen, const void *pw, size_t pwLen, const void *salt, size_t saltLen,
               unsigned n, unsigned r, unsigned p);
-
-void BRSkein(const char* input, char* output);
-
-void BRGroestl(const char* input, char* output);
-
-void BRQubit(const char* input, char* output);
 
 // zeros out memory in a way that can't be optimized out by the compiler
 inline static void mem_clean(void *ptr, size_t len)
